@@ -79,7 +79,6 @@
       <div class="row"><span class="k">NEXT</span><span class="v" id="nextName">--</span></div>
       <div class="row big"><span class="k">DISTANCE</span><span class="v" id="nextDist">-- m</span></div>
       <div class="row" id="photoRow" hidden><span class="k" id="photoKey">CURIOSITY PHOTO</span><span class="v"><img id="nextThumb" alt="What Curiosity saw at the next station" /></span></div>
-      <div class="row"><span class="k">MAX AT STATION</span><span class="v" id="stnTime">--</span></div>
       <div class="row"><span class="k">SLOPE AHEAD</span><span class="v" id="slope">--°</span></div>
       <div class="row" id="groundRow" hidden><span class="k">GROUND</span><span class="v" id="ground">--</span></div>
       <div class="row" id="offRow"><span class="k">OFF ROUTE</span><span class="v" id="off">-- m</span></div>
@@ -113,16 +112,19 @@
       <figure id="agentFig" hidden><img alt="" /><figcaption></figcaption></figure>
     </section>
 
-    <div id="tag">CONCEPT BUILD · NASA DATA: GALE 1 M DEM, CURIOSITY NAVCAM, MASTCAM, RAD, REMS AND STOPS, MARS TREK HIRISE · O₂: NASA SUIT TESTS · SIMULATED: CLOCK, O₂ SUPPLY, COLOUR, SKY, STORM GLOW · EV2 FIGURE: AI-GENERATED, <span id="figCredit">TRIPO</span> · MADE WITH AI TOOLS</div>
+    <!-- The AI marks come first: on a narrow screen the end of the line can be cut, and it must not be them. -->
+    <div id="tag">CONCEPT BUILD · MADE WITH AI TOOLS · EV2 FIGURE: AI-GENERATED, <span id="figCredit">TRIPO</span> · NASA DATA: GALE 1 M DEM, CURIOSITY NAVCAM, MASTCAM, RAD, REMS AND STOPS, MARS TREK HIRISE · O₂: NASA SUIT TESTS · SIMULATED: CLOCK, O₂ SUPPLY, COLOUR, SKY, STORM GLOW</div>
 
     <div id="keys">
       <button data-key="KeyG">AGENT</button>
       <button data-key="KeyV">LOOK DOWN</button>
       <button data-key="KeyP">AUTO WALK</button>
       <button data-key="KeyR">ALARM</button>
+      <button data-key="Tab" id="keyReadings">READINGS</button>
       <button data-key="Enter" id="keyRoute" hidden>NEW ROUTE</button>
       <button data-key="Escape" id="keyKeep" hidden>KEEP OLD</button>
     </div>
+    <div id="stick" role="application" aria-label="Joystick: push up to walk, sideways to turn"><i></i></div>
     <div id="help">W S walk · A D turn · drag to look · V look down · G agent · T +30 min · E EV2 uses more · P auto walk · R particle event (replay of measured data) · Enter take a suggested route · Esc keep the old one · M open map · L geology · C ground classes · + − zoom map</div>
   </div>
 

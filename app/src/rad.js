@@ -114,3 +114,9 @@ export function radFlicker(rate, step) {
 }
 // The spread of the flicker as a share of the reading: for the scale of the small line.
 export const flickerShare = () => series.quiet.sd / series.quiet.mean;
+// The dose rate every part of the screen shows at the frame time `ms` (the time requestAnimationFrame gives,
+// the same for every callback of one frame). The panel row, the day panel, the storm panel, the agent, the
+// layer card and the goggles all read it, so no two places show different numbers (owner, 2026-11-15).
+export const radShownAt = (rate, ms) => radFlicker(rate, Math.floor(ms / FLICKER.stepMs));
+// One way to write a dose rate: one decimal below 20 µGy/h, whole numbers above.
+export const fmtRate = (v) => v.toFixed(v < 20 ? 1 : 0);

@@ -17,7 +17,8 @@ import { chemHtml } from './chem.js';
 const ARRIVE_M = 7, HOME_M = 9;
 
 const h = (tag, attrs = {}, html = '') => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); e.innerHTML = html; return e; };
-const span = (sec) => { const m = Math.abs(Math.trunc(sec / 60)); return m >= 90 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`; };
+// The same way as the gauge writes a time (main.js dur): "3 h 14 min", "45 min". Before, 60 to 89 minutes read "75 min" here and "1 h 15 min" on the gauge.
+const span = (sec) => { const m = Math.abs(Math.trunc(sec / 60)), h = Math.floor(m / 60); return h ? `${h} h ${m % 60} min` : `${m} min`; };
 
 // The caption of a descent, and what happens when the view lands.
 export const arrivalCaption = (site, kicker) => `<span>${kicker}</span><b>${site.name} · SOL ${site.sol}</b><span>GALE CRATER, MARS</span><small>The descent is imagined. The ground is NASA's elevation model and image.</small>`;

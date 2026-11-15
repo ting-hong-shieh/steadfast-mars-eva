@@ -10,7 +10,7 @@ import { Route, buildRouteLine, buildBeacons, Footsteps, ReturnLine, PLACES } fr
 import { spread, cellOf, cellXZ, toblerFactor, etaAt, useEta, heightGrid, GRID_N, CELL, usePlan, planTraverse, pathFacts, slopeGrid, shadeGrid, STEEP_DEG, SUN, WEIGHT } from './planner.js';
 import { supply, edgeO2, kjhToGPerMin, kjhToVo2, vo2Walk, vo2Level, vo2ToGPerMin, vo2ToWatts, hrFromVo2,
   STATION_KJ_H, EVA_MEAN_KJ_H, LEAK_KJ_H, BAND, ETA_DEFAULT, ETA_BY_CLASS, SUSTAIN, HR_BAND } from './metabolic.js';
-import { radNow, radDose, setRadShift, radFlicker, FLICKER } from './rad.js';
+import { radNow, radDose, setRadShift, radShownAt, fmtRate, FLICKER } from './rad.js';
 import { envNow, sunNow, setDeparture, daylight, DEPART_DEFAULT } from './env.js';
 import { lineOfSight, stateWithHold } from './los.js';
 import { Minimap } from './minimap.js';
@@ -261,6 +261,27 @@ document.querySelectorAll('#keys button').forEach((b) => b.addEventListener('cli
   dispatchEvent(new KeyboardEvent('keydown', { code: b.dataset.key }));
   dispatchEvent(new KeyboardEvent('keyup', { code: b.dataset.key }));
 }));
+// Phone: a virtual joystick at the lower left (owner, 2026-11-15 22:35: without one it is hard to move).
+// Up walks, down steps back, sideways turns, in proportion to how far the knob is pushed. Touching it stops the auto walk.
+{
+  const pad = document.getElementById('stick'), knob = pad && pad.querySelector('i');
+  let sid = null;
+  const set = (e) => {
+    const b = pad.getBoundingClientRect(), r = b.width / 2;
+    let dx = e ? e.clientX - (b.left + r) : 0, dy = e ? e.clientY - (b.top + r) : 0;
+    const d = Math.hypot(dx, dy); if (d > r) { dx *= r / d; dy *= r / d; }
+    knob.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+    const dead = (v) => (Math.abs(v) < 0.18 ? 0 : v);
+    state.stick = { x: dead(dx / r), y: dead(dy / r) };
+    pad.classList.toggle('on', !!e);
+  };
+  if (pad) {
+    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); sid = e.pointerId; pad.setPointerCapture(sid); state.auto = false; set(e); });
+    pad.addEventListener('pointermove', (e) => { if (e.pointerId === sid) set(e); });
+    const end = (e) => { if (e.pointerId === sid) { sid = null; set(null); } };
+    pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+  }
+}
 let drag = null;
 canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointerup', () => { drag = null; });
@@ -277,7 +298,7 @@ const GROUND_NAMES = ['SOIL', 'BEDROCK', 'SAND', 'BIG ROCK'];
 const $ = (id) => document.getElementById(id);
 const el = {
   elapsed: $('elapsed'), left: $('left'), leftBar: $('leftBar'), ret: $('ret'), margin: $('margin'),
-  nextName: $('nextName'), nextDist: $('nextDist'), slope: $('slope'), off: $('off'), stnTime: $('stnTime'),
+  nextName: $('nextName'), nextDist: $('nextDist'), slope: $('slope'), off: $('off'),
   backArrow: $('backArrow'), timeBlock: $('timeBlock'), o2: $('o2'), o2Bar: $('o2Bar'), effort: $('effort'), effortRow: $('effortRow'), doseRow: $('doseRow'), doseRate: $('doseRate'), doseSrc: $('doseSrc'), agent: $('agent'), agentText: $('agentText'), agentRule: $('agentRule'),
   labels: $('labels'), tape: $('tape'), navBlock: $('navBlock'), los: $('los'), losRow: $('losRow'), ground: $('ground'), groundRow: $('groundRow'), offRow: $('offRow'), gauge: $('gauge'), keyRoute: $('keyRoute'), keyKeep: $('keyKeep'), keys: $('keys'), mmReach: document.querySelector('.mm-reach'), photoRow: $('photoRow'), nextThumb: $('nextThumb'), photoKey: $('photoKey'), agentFig: $('agentFig'), gArc2: $('gArc2'), ev2Tag: $('ev2Tag'), gArc: $('gArc'), gO2: $('gO2'), gTime: $('gTime'), gSub: $('gSub'),
 };
@@ -305,6 +326,8 @@ const durParts = (sec) => {
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
   return { sign: neg ? '−' : '', h, m };
 };
+// A list in plain English: "A", "A and B", "A, B and C".
+const list = (a) => (a.length < 3 ? a.join(' and ') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
 const dur = (sec) => { const { sign, h, m } = durParts(sec); return h ? `${sign}${h} h ${m} min` : `${sign}${m} min`; };
 const durHtml = (sec) => {
   const { sign, h, m } = durParts(sec);
@@ -570,11 +593,13 @@ function agentMessage() {
     const min = n.ret / 60;
     const inside = min <= SHELTER_REF_MIN;
     const r = radNow(state.elapsedSec, state.alarm);
+    // The agent reads out the dose rate the panel shows (radLive), not a second number.
+    const x = radLive / r.quiet;
     return {
       id: 'alarm', rule: 'RULE · DOSE RATE 25 % ABOVE BACKGROUND',
       warn: true,
       head: 'Particle event. Go to HAB on the amber line.',
-      body: `HAB ${dur(n.ret)} · ${(n.back / 1000).toFixed(2)} km${homeSide() ? ` · starts ${homeSide()}` : ''} · ${inside ? 'within' : 'beyond'} ${SHELTER_REF_MIN} min of shelter\nDose rate ${r.rate.toFixed(r.alarm ? 0 : 1)} µGy/h · ${(r.rate / r.quiet).toFixed(r.rate / r.quiet < 10 ? 1 : 0)}× before the event`,
+      body: `HAB ${dur(n.ret)} · ${(n.back / 1000).toFixed(2)} km${homeSide() ? ` · starts ${homeSide()}` : ''} · ${inside ? 'within' : 'beyond'} ${SHELTER_REF_MIN} min of shelter\nDose rate ${fmtRate(radLive)} µGy/h · ${x.toFixed(x < 10 ? 1 : 0)}× before the event`,
       note: `Replay: Curiosity RAD, ${r.utc} UTC, in the instrument, not in a suit. Rule: Löwe et al. 2025, preprint. R ends the replay.`,
     };
   }
@@ -582,7 +607,7 @@ function agentMessage() {
     const m = Math.round(state.offset), sg = offInfo.suggest, back = Math.ceil(offInfo.detourG);
     const note = `New plan once past ${OFF_WARN_M} m, again every ${OFF_SNOOZE_M} m further. Our settings. Finish plan: chance to do the stations and reach HAB above the reserve, from 1,000 runs on Apollo EVA data.`;
     if (sg) {
-      const to = `${[...sg.keep, 'HAB'].join(' → ')}${sg.gone.length ? `, drops ${sg.gone.join(' and ')}` : ''}`;
+      const to = `${[...sg.keep, 'HAB'].join(' → ')}${sg.gone.length ? `, drops ${list(sg.gone)}` : ''}`;
       const pc = (v) => `${Math.round(v * 100)} %`;
       return {
         id: 'off-decide', rule: 'RULE · OFF ROUTE · YOU DECIDE', warn: true,
@@ -601,10 +626,10 @@ function agentMessage() {
 
   if (planNote && n.margin > 0) {
     const next = planNote.keep.length ? `New route: ${planNote.keep.join(' → ')} → HAB` : 'New route: HAB';
-    const gone = planNote.gone.length ? ` ${planNote.gone.join(' and ')} dropped.` : '';
+    const gone = planNote.gone.length ? ` ${list(planNote.gone)} dropped.` : '';
     return {
       id: `plan-${planNote.at}`, rule: planNote.why === 'off' ? 'RULE · NEW PLAN WHEN OFF ROUTE' : planNote.why === 'crew' ? 'CREW CHOICE · GO HOME' : 'RULE · DROP STATIONS WHEN LATE', warn: true,
-      head: planNote.why === 'off' ? `New route taken.${gone}` : planNote.why === 'crew' ? `Your call: going home.${planNote.gone.length ? ` ${planNote.gone.join(' and ')} skipped.` : ''}` : `Late.${gone}`,
+      head: planNote.why === 'off' ? `New route taken.${gone}` : planNote.why === 'crew' ? `Your call: going home.${planNote.gone.length ? ` ${list(planNote.gone)} skipped.` : ''}` : `Running late.${gone}`,
       body: `${next} · finish plan ${Math.round(planNote.conf * 100)} %`,
       note: `Assumed: ${PLACES[1].workMin} min per station, ${ASSUME.reserveMin} min reserve. Oxygen: suited test data at 3/8 g (NASA 2009), slope term from Minetti 2002.`,
     };
@@ -703,16 +728,17 @@ function updateHud(now, dt) {
   el.doseRow.classList.toggle('warn', alarm);
   const rad = radNow(state.elapsedSec, state.alarm);
   // The number moves around the reading between two readings (rad.js, radFlicker: simulated, the line under it says so).
-  radLive = radFlicker(rad.rate, Math.floor(performance.now() / FLICKER.stepMs));
-  el.doseRate.innerHTML = `${radLive.toFixed(radLive < 20 ? 1 : 0)}<span class="unit"> µGy/h</span><span class="km"> · ${rad.total.toFixed(0)} µGy</span>`;
+  // `now` is the frame time, the same one game.js uses for the other places that show the dose rate.
+  radLive = radShownAt(rad.rate, now);
+  el.doseRate.innerHTML = `${fmtRate(radLive)}<span class="unit"> µGy/h</span><span class="km"> · ${rad.total.toFixed(0)} µGy</span>`;
   // With the flicker on, a line under the row gives the reading itself and says that the movement is simulated.
-  el.doseSrc.textContent = FLICKER.on ? `RAD READING ${rad.rate.toFixed(rad.rate < 20 ? 1 : 0)} · FLICKER SIMULATED` : `${rad.label} · IN INSTRUMENT`;
+  el.doseSrc.textContent = FLICKER.on ? `RAD READING ${fmtRate(rad.rate)} · FLICKER SIMULATED` : `${rad.label} · IN INSTRUMENT`;
   el.doseSrc.classList.toggle('sim', FLICKER.on);
 
   // The way back is traced before the panel reads from it.
   returnLine.update(state.pos.x, state.pos.z, back);
   const view = state.heading + state.yawOffset;
-  el.slope.textContent = `${slopeDegAt(state.pos.x, state.pos.z, state.heading).toFixed(0)}°`;
+  { const sl = Math.round(slopeDegAt(state.pos.x, state.pos.z, state.heading)); el.slope.textContent = `${sl < 0 ? '−' : ''}${Math.abs(sl)}°`; }
   el.off.textContent = back ? '--' : `${Math.round(state.offset)} m`;
   el.offRow.classList.toggle('warn', offWarn());
   if (!back && offInfo) el.off.innerHTML = `${Math.round(state.offset)} m<span class="km"> · ${Math.round(offInfo.share * 100)} % OF MARGIN</span>`;
@@ -739,16 +765,11 @@ function updateHud(now, dt) {
     // Going home: the panel and the heading mark follow the amber line, not the planned route.
     targetName = 'HAB'; targetDist = n.back;
     target = returnLine.pointAhead(12) || PLACES[0];
-    el.stnTime.textContent = '--';
   } else {
+    // The row MAX AT STATION (time at the next station if every later station is skipped) was removed
+    // on 2026-11-15: beside the gauge's time to spare it read as a second answer to one question (owner).
     const next = route.nextStation(state.s);
     targetName = next.name; targetDist = Math.max(0, next.s - state.s); target = next.p;
-    // Time that can be spent at the next station if every later station is skipped.
-    // The tighter of time and oxygen: work at the station uses oxygen at the station rate.
-    const stnT = n.left - ASSUME.reserveMin * 60 - legSec(state.pos.x, state.pos.z, next.name) - home.time[cellOf(next.p.x, next.p.z)];
-    const stnO = (o2BudgetG() - legG(state.pos.x, state.pos.z, next.name) - home.o2[cellOf(next.p.x, next.p.z)]) / STATION_GPM * 60;
-    const stnTime = next.name === 'HAB' ? null : Math.min(stnT, stnO);
-    el.stnTime.innerHTML = stnTime === null ? '--' : durHtml(Math.max(0, stnTime));
   }
   showCard(targetName, targetDist, back);
   el.nextName.textContent = targetName;
@@ -829,6 +850,25 @@ function updateHud(now, dt) {
       el.ev2Tag.style.left = `${(hp.x + 1) / 2 * innerWidth}px`; el.ev2Tag.style.top = `${(1 - hp.y) / 2 * innerHeight}px`;
       el.ev2Tag.innerHTML = `<b>EV2</b>O₂ ${ev2Pct} %${apart > 15 ? ` · ${Math.round(apart)} m` : ''}`;
       el.ev2Tag.classList.toggle('warn', n.who === 'EV2' && (back || (conf && conf.p < GO_AT)));
+      // The station label and the EV2 tag must not lie on each other: the tag moves just above or below the label.
+      const lab = stationLabels.find((q) => q.d.style.display !== 'none');
+      if (lab) {
+        const t = el.ev2Tag.getBoundingClientRect(), r = lab.d.getBoundingClientRect();
+        if (t.left < r.right + 4 && r.left - 4 < t.right && t.top < r.bottom + 4 && r.top - 4 < t.bottom) {
+          el.ev2Tag.style.top = `${(t.top + t.bottom < r.top + r.bottom ? r.top - 4 : r.bottom + 4 + t.height).toFixed(1)}px`;
+        }
+      }
+      // Nor may it lie on the panels: on 2026-11-15 it covered the O₂ LEFT row of the left block (owner).
+      // Beside a side panel the tag moves just outside its edge, toward the middle; over the gauge it moves above it.
+      for (const id of ['timeBlock', 'navBlock', 'day', 'gauge']) {
+        const b = document.getElementById(id);
+        if (!b || !b.getClientRects().length || getComputedStyle(b).visibility === 'hidden' || Number(getComputedStyle(b).opacity) < 0.1) continue;
+        const t = el.ev2Tag.getBoundingClientRect(), r = b.getBoundingClientRect();
+        if (!(t.left < r.right + 6 && r.left - 6 < t.right && t.top < r.bottom + 6 && r.top - 6 < t.bottom)) continue;
+        if (id === 'gauge') el.ev2Tag.style.top = `${(r.top - 6).toFixed(1)}px`;
+        else if (r.left + r.right < innerWidth) el.ev2Tag.style.left = `${(r.right + 8 + t.width / 2).toFixed(1)}px`;
+        else el.ev2Tag.style.left = `${(r.left - 8 - t.width / 2).toFixed(1)}px`;
+      }
     }
     window.__ev2 = { x: +ev2.pos.x.toFixed(1), z: +ev2.pos.z.toFixed(1), apart: +apart.toFixed(1), o2Pct: ev2Pct, ratio: +ev2Now.toFixed(3), limits: n.who };
   }
@@ -850,6 +890,7 @@ function updateHud(now, dt) {
   // Decision first (owner, 2026-11-14 about 21:00, "1-5可以接受"): the big line is the level, the
   // second line the time it leaves. O₂ in percent moves to the small type under it.
   el.gO2.textContent = level;
+  el.gauge.toggleAttribute('data-long', level.length > 7);
   el.gTime.textContent = level === 'EMERGENCY' || turn ? `HAB ${dur(n.ret)} away` : `${dur(n.margin)} to spare`;
   // Finish plan: the share of 1,000 runs that do the stations left and reach HAB above the reserve.
   // Under it, the oxygen above the reserve at HAB: median, and the range of 90 % of the runs.
@@ -967,9 +1008,11 @@ function frame(now) {
     dh = Math.atan2(Math.sin(dh), Math.cos(dh));
     state.heading += dh * Math.min(1, dt * 3);
   } else {
-    const turn = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
+    // The phone's joystick (state.stick, -1 to 1 on each axis) adds to the keys: sideways turns, up walks.
+    const st = state.stick || { x: 0, y: 0 };
+    const turn = THREE.MathUtils.clamp((k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0) + st.x, -1, 1);
     state.heading += turn * 1.3 * dt;
-    const fwd = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
+    const fwd = THREE.MathUtils.clamp((k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0) - st.y, -1, 1);
     if (fwd) {
       const h = state.heading + state.yawOffset;
       const lim = TERRAIN_SIZE / 2 - 12;

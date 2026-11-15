@@ -115,7 +115,8 @@ body.focus #gauge .g-sub { display: none; }
 #dock button.wide { margin-left: 0; }
 body.focus #dock button:not([data-code="KeyW"], [data-code="KeyM"], [data-code="Tab"], .wide) { display: none; }
 body.focus #dock { gap: 26px; }
-#tag { font-size: 12px !important; letter-spacing: 0.02em; color: var(--ink-3); opacity: 1 !important; bottom: 1.3vh !important; max-width: 96vw; overflow: hidden; text-overflow: ellipsis; }
+/* The type shrinks with the window so the whole line fits (at 12 px it was cut at 1,460 px wide, and the cut took "MADE WITH AI TOOLS"). */
+#tag { font-size: clamp(9px, 0.76vw, 12px) !important; letter-spacing: 0.02em; color: var(--ink-3); opacity: 1 !important; bottom: 1.3vh !important; max-width: 96vw; overflow: hidden; text-overflow: ellipsis; }
 /* Folded panels: the long credit line goes, the AI mark stays (contest rule: AI-made images carry a visible mark). */
 body.focus #tag { font-size: 0 !important; }
 body.focus #tag::after { content: "EV2 FIGURE: AI-GENERATED · MADE WITH AI TOOLS"; font-size: 12px; }
@@ -192,13 +193,16 @@ kbd, button.go { text-shadow: none; }
 #coach button.go:hover, .intro-card button.go:hover { background: var(--guide) !important; }
 #coach button.ghost { box-shadow: none; color: var(--ink-2); padding-left: 0; } #coach button.ghost:hover { color: var(--ink); }
 #coach button:disabled { opacity: 0.3; } #coach button.ghost:disabled { visibility: hidden; }
-#coach button.go:disabled { opacity: 1; background: none !important; box-shadow: inset 0 0 0 1px rgba(242, 245, 247, 0.28); color: rgba(242, 245, 247, 0.62); }
+#coach button.go:disabled, #coach button.go.wait { opacity: 1; background: none !important; box-shadow: inset 0 0 0 1px rgba(242, 245, 247, 0.28); color: rgba(242, 245, 247, 0.62); cursor: default; }
+#coach .task.nudge { animation: taskNudge 0.45s ease-in-out; } @keyframes taskNudge { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+#dock button.na, body.training #dock button.na:not(.wide) { opacity: 0.3; cursor: default; }
 #coach details.why { border-left: 0; padding-left: 0; }
 #coach details.why summary { font-size: 12px; letter-spacing: 0.06em; color: var(--guide); }
 /* The paper figures have a white ground: turned dark and laid on the card. */
 /* The figures are drawn for the display (writeup/figures, FIG_THEME=hud): no filter. */
 #coach details.why img { background: rgba(0, 0, 0, 0.22); padding: 8px; max-height: 34vh; border-radius: var(--r-ctl); }
-#coach:has(details.why[open] img) { top: auto !important; left: 4.4vw !important; width: min(42vw, 620px) !important; }
+/* The card ends left of the gauge (320 px wide, centred), so it no longer covers the decision, also in the step that is about the gauge. */
+#coach:has(details.why[open] img) { top: auto !important; left: 4.4vw !important; width: min(42vw, 620px, max(380px, calc(45.6vw - 170px))) !important; }
 body.explaining #coach { top: auto !important; }
 /* The thing a step talks about: everything else goes darker. No frame. */
 .spot { outline: 0; animation: none; box-shadow: 0 0 0 200vmax rgba(4, 6, 9, 0.42); z-index: 5; }
@@ -213,6 +217,7 @@ body.storming #hud { --line: var(--ink); --line-dim: rgba(242, 245, 247, 0.45); 
 body.storming .block, body.storming #day, body.storming #legend, body.storming #layers, body.storming #dock { opacity: 0.35; transition: opacity 0.4s; }
 #storm { top: 13vh; color: var(--ink); }
 .storm-head { font-size: 20px; font-weight: 600; letter-spacing: 0.12em; color: var(--danger); animation: none; }
+.storm-rate span { flex: none; white-space: nowrap; }
 .storm-rate b { font-size: 64px; font-weight: 700; color: var(--danger); } .storm-rate span { font-size: 18px; } .storm-rate em { font-size: 14px; letter-spacing: 0.02em; color: var(--ink-2); }
 #stormCurve { display: none; }
 .storm-src { font-size: 12px; letter-spacing: 0.02em; color: var(--ink-3); opacity: 1; margin-top: 4px; }
@@ -222,6 +227,9 @@ body.storming .block, body.storming #day, body.storming #legend, body.storming #
 body:has(#intro:not([hidden])) #hud { opacity: 0; }
 .intro-card { max-width: 600px; background: none !important; box-shadow: none; padding: 0 !important; font-size: 17px; line-height: 1.55; color: var(--ink-2); }
 .intro-kicker { font-size: 13px; letter-spacing: 0.14em; color: var(--guide); }
+/* The project's name on the start screen (owner, 2026-11-15: the name did not appear anywhere on it). */
+.intro-brand { display: flex; align-items: baseline; gap: 16px; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.06em; color: var(--guide); }
+.intro-brand span { font-size: 13px; font-weight: 500; letter-spacing: 0.14em; color: var(--ink-3); }
 .intro-card h1 { font-size: clamp(40px, 3.6vw, 60px); font-weight: 700; line-height: 1.04; letter-spacing: -0.005em; color: var(--ink); margin: 10px 0 20px; }
 .intro-card p b { color: var(--ink); }
 .intro-actions { gap: 12px; margin: 22px 0 22px; }
@@ -248,6 +256,8 @@ body.training #minimap { display: none; }
 #legend .leg-head { justify-content: flex-end; gap: 14px; }
 /* After the second look at the screenshots. */
 #gauge[data-level="back"] .g-big, #gauge[data-level="emergency"] .g-big { font-size: 38px; margin-top: -92px; letter-spacing: 0; }
+/* Every long word (HEAD HOME too, which kept 52 px and ran past the arc) at the size of TURN BACK. */
+#gauge[data-long] .g-big { font-size: 38px; margin-top: -92px; letter-spacing: 0; }
 #storm { top: 14.6vh; }
 .spot { border-radius: 20px; } #gauge.spot { border-radius: 170px 170px 28px 28px; }
 body:has(#coach details.why[open]) .block.left, body:has(#coach details.why[open]) #day { visibility: hidden; }
@@ -402,7 +412,7 @@ body.choosing #toast { display: none; }
 #foldHint:hover { color: var(--ink); }
 @keyframes foldBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 #foldHint.seen { animation: none; }
-body.training #foldHint, body.choosing #foldHint, body.explaining #foldHint, body.cine #foldHint, body:has(#intro:not([hidden])) #foldHint, body:has(#world:not([hidden])) #foldHint { display: none; }
+body.storming #foldHint, body.training #foldHint, body.choosing #foldHint, body.explaining #foldHint, body.cine #foldHint, body:has(#intro:not([hidden])) #foldHint, body:has(#world:not([hidden])) #foldHint { display: none; }
 #photoKey em { display: block; margin-top: 3px; max-width: 250px; font-style: normal; font-size: 12px; letter-spacing: 0.02em; line-height: 1.35; text-align: right; color: var(--ink); text-transform: none; white-space: normal; }   /* a long reason wraps: it ran past the edge of the block */
 #choice .why-here { margin: 12px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink); } #choice .why-here b { display: block; font-size: 11.5px; letter-spacing: 0.08em; color: var(--ink-2); }
 #choice .why-here span { display: block; font-size: 11.5px; color: var(--ink-3); }
@@ -580,3 +590,61 @@ body.gog-ir #scene { filter: url(#fxIr); } body.gog-rad #scene { filter: url(#fx
 body.cine #gogFx p, body.planning #gogFx p { display: none; }
 #doseSrc.sim { display: block; text-align: right; font-size: 11px; letter-spacing: 0.04em; margin-top: -1px; }
 #gogFx canvas { filter: drop-shadow(0 0 3px rgba(170, 255, 220, 0.9)); }
+
+/* The tour step about the storm holds a figure in its card. The event panel was hidden then, so the step showed no
+   dose rate at all once the storm ran. It moves to the right of the card instead (final check of 2026-11-15). */
+@media (min-width: 761px) {
+  body:has(#coach details.why[open] img) #storm { visibility: visible; left: auto; right: 4.4vw; transform: none; width: min(36vw, 520px); top: 15.5vh; animation-name: popSide; }
+  body.storming:has(#coach details.why[open] img) #legend { visibility: hidden; }
+}
+@keyframes popSide { from { opacity: 0; transform: translateY(10px) scale(0.96); } }
+/* Phone width: the tour card was 34 % of the width (130 px on a 390 px phone) and the plan screen kept two columns,
+   so its right half was cut off. One column, nearly the full width (final check of 2026-11-15). */
+@media (max-width: 760px) {
+  #coach, #coach:has(details.why[open] img), #coach:has(details.why img):not(:has(ol.pipe)) { left: 3vw !important; width: 94vw !important; }
+  .plan-grid { grid-template-columns: minmax(0, 1fr); }
+  #coach header .pips { display: none; }   /* the step marks pushed the page arrows and the cross off the card */
+}
+/* Phone, 2026-11-15 22:30 (owner: the phone view was hard to use, chaotic and complicated; fold by default).
+   The panels start folded (game.js), so the view shows the heading, the gauge and the map. There is no keyboard:
+   the Tab hint goes, READINGS in the button row opens the panels, and the tour's task row is tapped.
+   The tour card sits low as a sheet above the buttons, so the scene and the gauge stay in view. */
+@media (max-width: 760px) {
+  #foldHint { display: none !important; }
+  body.focus .block.spot { display: block !important; }
+  #coach:not(.plan) { bottom: calc(7vh + 56px) !important; max-height: 46vh; padding: 14px 16px 12px !important; }
+  #coach:not(.plan) h2 { font-size: 19px; margin-bottom: 6px; }
+  #coach:not(.plan) .body > p { font-size: 14px; line-height: 1.45; }
+  #coach .task[role="button"] { cursor: pointer; min-height: 44px; border: 1px solid var(--guide); border-radius: 10px; padding: 6px 10px; }
+  #coach .task[role="button"] kbd { width: auto; padding: 0 6px; font-size: 11px; }
+  body.training #gauge:not(.spot) { opacity: 0.35; }
+  #keys { gap: 6px; } #keys button { min-width: 0; font-size: 11px; letter-spacing: 0.04em; padding: 0 4px; }
+  /* The gauge sat on the button row and the corner map: it is smaller and above the buttons, the map goes top left. */
+  #gauge { width: 236px; bottom: calc(7vh + 64px); }
+  #minimap { top: 10.5vh !important; bottom: auto !important; left: 3vw !important; }
+  /* When the step is about the gauge or the agent card, both low on the screen, the tour card goes to the top. */
+  #coach[data-spot="#gauge"], #coach[data-spot="#agent"] { top: 9vh !important; bottom: auto !important; }
+  .block.right { top: 12vh !important; } #photoRow { display: none !important; }
+  body.training #legend:not(.spot) { display: none !important; }   /* the ground-type line lay under the station block */
+  /* The joystick at the lower left (main.js), for the thumb. In the free walk the gauge moves right to make room. */
+  #stick { display: block; position: absolute; left: 5vw; bottom: calc(7vh + 62px); width: 112px; height: 112px; border-radius: 50%; pointer-events: auto; touch-action: none; z-index: 4;
+    background: rgba(6, 8, 10, 0.3); box-shadow: inset 0 0 0 1.5px rgba(242, 245, 247, 0.5); }
+  #stick i { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: rgba(242, 245, 247, 0.85); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45); pointer-events: none; }
+  #stick.on i { background: var(--guide); }
+  body.training #stick, body:has(#intro:not([hidden])) #stick, body.cine #stick, body.choosing #stick { display: none; }
+  body:not(.training) #gauge { left: auto; right: 2vw; transform: none; width: 214px; }
+  /* From the phone tester's report (2026-11-15 22:36): tap targets of at least 40 px, the four-step figure of the
+     ground in two columns, the plan screen without its long notes, and a margin on the right of the start screen. */
+  #coach header .pg, #coach .coach-x { min-width: 40px; min-height: 40px; }
+  #coach footer button { min-height: 44px; }
+  #coach .seg button, #coach .plan-opts button { min-height: 40px; }
+  ol.pipe { grid-template-columns: 1fr 1fr !important; }
+  #coach.plan p.plan-note { display: none; }
+  #intro { padding: 0 6vw !important; }
+  /* The agent card lay under the joystick, and the ground-type line under the storm title. */
+  body:not(.training) #agent { bottom: calc(7vh + 186px) !important; }
+  body.storming #legend { display: none !important; }
+  #gauge[data-long] .g-big { font-size: 30px; }   /* EMERGENCY ran past the right edge of the phone */
+}
+#stick { display: none; }
+@media (max-width: 760px) { #stick { display: block; } body.training #stick, body:has(#intro:not([hidden])) #stick, body.cine #stick, body.choosing #stick { display: none; } }

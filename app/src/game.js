@@ -14,11 +14,14 @@ import './game.css';
 import './hud2.css';
 import '@fontsource/chakra-petch/700.css';
 import { envNow, envSeries } from './env.js';
-import { radCurve, FLICKER, flickerShare, radFlicker } from './rad.js';
+import { radCurve, FLICKER, flickerShare, radFlicker, radShownAt, fmtRate } from './rad.js';
 import { setupVisit, arrivalCaption, land } from './visit.js';
 
 const h = (tag, attrs = {}, html = '') => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); e.innerHTML = html; return e; };
 const KIND = { measured: 'MEASURED', model: 'MODEL', computed: 'COMPUTED', simulated: 'SIMULATED' };
+// A phone-width screen (the same 760 px limit as the style sheets). It has no keyboard, so the tour's tasks are tapped.
+const PHONE = typeof matchMedia === 'function' && matchMedia('(max-width: 760px)').matches;
+const TAP_TASK = { W: ['KeyP', 'Tap here to walk a few steps'], C: ['KeyC', 'Tap here to switch the colours'], T: ['KeyT', 'Tap here to jump 30 minutes ahead'], R: ['KeyR', 'Tap here to start the storm'] };
 const KD = Object.fromEntries(Object.keys(KIND).map((k) => [k, `<i class="kd" data-kind="${k}" title="${KIND[k]}"></i>`]));
 const GROUND = [['SOIL', '#cda06e'], ['BEDROCK', '#7878c8'], ['SAND', '#f0dc50'], ['BIG ROCK', '#dc3c3c']];
 
@@ -46,7 +49,7 @@ const LAYERS = [
     body: 'The number comes from the radiation detector on Curiosity\'s deck. Start the solar storm to replay the real particle event of 20 May 2024: the reading climbs from 5.6 to 351 µGy/h in 54 minutes. The alarm fires when the rate is 25 % above the background, and the display then shows only the way to shelter.',
     src: 'MSL RAD, PDS · alarm rule: Löwe et al. 2025 (preprint)',
     limit: 'Read inside the instrument on the rover, not inside a suit. The event happened on sol 4190, not on the sol of this walk.',
-    live: (s) => `NOW: ${s.rad.rate.toFixed(s.rad.rate < 20 ? 1 : 0)} µGy/h · ${s.rad.label}` },
+    live: (s) => FLICKER.on ? `NOW: ${fmtRate(s.radShown)} µGy/h · RAD READING ${fmtRate(s.rad.rate)} · FLICKER SIMULATED` : `NOW: ${fmtRate(s.rad.rate)} µGy/h · ${s.rad.label}` },
   { id: 'weather', name: 'WEATHER', kind: 'measured', data: 'ATMOSPHERIC · THERMAL',
     title: 'The weather of the same day, minute by minute.',
     body: 'Air temperature, ground temperature and pressure, as Curiosity\'s weather station measured them on sol 4709. They run on the clock of your walk, which starts at 08:08 local time. They are shown on this card so the crew knows the day. They are not on the helmet view, and they do not change the oxygen model.',
@@ -63,7 +66,7 @@ const LAYERS = [
     body: 'On 4 November 2025 Mars was 2.41 astronomical units from Earth. A radio signal needed 20 minutes one way. That is why this display decides on the spot and never waits for Mission Control.',
     src: 'JPL Horizons (DE441), centre of Mars to centre of Earth',
     limit: 'Geometry only. No relay orbiter, antenna or terrain is modelled.',
-    live: (s, e) => `NOW: ${Math.floor(e.lightMin)} min ${Math.round((e.lightMin % 1) * 60)} s ONE WAY` },
+    live: (s, e) => { const [m, sec] = minSec(e.lightMin); return `NOW: ${m} min ${String(sec).padStart(2, '0')} s ONE WAY`; } },
   { id: 'oxygen', name: 'OXYGEN', kind: 'model', data: 'NASA SUIT TESTS · APOLLO',
     title: 'Oxygen from NASA suit tests, doubt from Apollo.',
     body: 'What a step costs comes from NASA tests of people walking in a prototype suit at Mars gravity, with a term for slope. How wrong a plan can be comes from Apollo: in 9 of 12 cases the crew member ended with less oxygen than planned. The display runs 1,000 simulated walks with those errors and shows the share that finish the plan.',
@@ -86,6 +89,8 @@ const GROUND_HOW = `<ol class="pipe">
   <li><b>4 · INTO THE ROUTE</b><span>The type sets what a step costs: bedrock ×1.0, soil ×1.2, big rock ×1.5, sand ×2.1. The route is the path of least oxygen.</span></li>
 </ol>`;
 const c = (kelvin) => `${kelvin - 273.15 < 0 ? '−' : ''}${Math.abs(Math.round(kelvin - 273.15))}`;
+// Minutes and whole seconds of a time in minutes. Rounding the seconds alone could give "20 min 60 s".
+const minSec = (min) => { const t = Math.round(min * 60); return [Math.floor(t / 60), t % 60]; };
 
 // ---------- Guided tour ----------
 // Each step puts the walk in one state and shows one part of the product. A step with `goal` waits
@@ -111,8 +116,11 @@ const STEPS = [
     body: 'The big word is the decision. Under it is the time to spare before you must turn back. It is the tighter of two limits: the clock and the oxygen. EV2 walks with you, and the pair turns back when the first of the two would run low.',
     task: ['T', 'Press T to jump 30 minutes ahead'], goal: (s, ev) => ev.has('KeyT'),
     why: { fig: 'apollo_oxygen.png', text: 'Apollo plans were often too hopeful: in 9 of 12 cases the crew member ended with less oxygen than planned. So the margin keeps a 30 minute reserve, and FINISH PLAN runs 1,000 walks with Apollo\'s errors.' } },
-  { title: 'Late? The plan changes', jump: { s: 60, t: 6.55, auto: true }, spot: '#agent',
-    body: 'Six and a half hours in, the stations ahead no longer fit. The display drops them and plans a new way home. It keeps a station only if at least 90 % of 1,000 simulated walks would finish.',
+  // The same moment as slide 5 of the deck and the replan figure: 6.0 h in, just past Station A, Station C is
+  // dropped and Station B kept (checked on the build of 2026-11-15 21:40). Before that the step jumped to
+  // 6.55 h near the habitat, where all three stations were dropped, and its title "Late?" was unclear (owner).
+  { title: 'Running late: the plan changes', jump: { s: 240, t: 6.0, auto: true }, spot: '#agent',
+    body: 'Six hours in, just past Station A, the walk is behind its plan, and Stations B and C no longer both fit before the way home. The display drops Station C, keeps Station B and plans a new way home. It keeps a station only if at least 90 % of 1,000 simulated walks would finish.',
     why: { fig: 'replan_example.png', text: 'Three moments read from the app: the plan stops fitting, a station is dropped, and a new least-oxygen route is planned from where you stand.' } },
   { title: 'Solar storm', jump: { s: 260, t: 2 }, spot: null,
     body: 'Curiosity measured a real particle event at this crater on 20 May 2024. Replay it. The amber line is the fastest way to shelter, and the planned route disappears.',
@@ -121,7 +129,7 @@ const STEPS = [
 ];
 
 const SCENARIOS = [
-  { name: 'Running late', note: 'Stations are dropped and the route is planned again.', jump: { s: 60, t: 6.55, auto: true } },
+  { name: 'Running late', note: 'A station is dropped and the route is planned again.', jump: { s: 240, t: 6.0, auto: true } },
   { name: 'Solar storm', note: 'Replay of the particle event Curiosity measured in 2024.', jump: { s: 260, t: 2, alarm: true, auto: true } },
 ];
 
@@ -143,13 +151,20 @@ export function setupGame(api) {
   // Two views of the same display. FOCUS: the decision, the heading, the map and one line of the
   // day, as a walker would keep it. TELEMETRY (Tab): every panel. The training, an open layer card
   // and a particle event always show the panels.
-  let focusPref = params.get('hud') === 'focus';   // every panel by default, Tab folds them away (owner, 2026-11-15)
+  // On a computer every panel shows by default and Tab folds them away (owner, 2026-11-15). On a phone the panels
+  // start folded, in the tour too, and the button READINGS opens them: unfolded they lay on each other and the
+  // phone view read as chaotic (owner, 2026-11-15 22:20: "fold by default on a phone"). ?hud=all opens them.
+  let focusPref = params.get('hud') === 'focus' || (PHONE && params.get('hud') !== 'all');
   // The Tab hint blinks until the panels were folded once, on this computer. After that it stays, without blinking.
   let foldSeen = focusPref;
   try { foldSeen = foldSeen || localStorage.getItem('mm.folded') === '1'; } catch { /* private window */ }
+  // The panels can fold only in the free walk: a press during the tour, a layer card or a storm changed nothing on
+  // screen and folded the panels later, by surprise. The TAB button is dimmed meanwhile.
+  const canFold = () => (step < 0 || PHONE) && (stormK < 0.02 || PHONE) && !explainId;
   addEventListener('keydown', (e) => {
     if (e.code !== 'Tab') return;
-    e.preventDefault?.(); focusPref = !focusPref;
+    e.preventDefault?.(); if (!canFold()) return;
+    focusPref = !focusPref;
     if (!foldSeen) { foldSeen = true; try { localStorage.setItem('mm.folded', '1'); } catch { /* private window */ } }
   });
 
@@ -174,7 +189,7 @@ export function setupGame(api) {
     <div class="storm-head">SOLAR PARTICLE EVENT</div>
     <div class="storm-rate"><b id="stormRate">--</b><span>µGy/h ${KD.measured}</span><em id="stormX"></em></div>
     <canvas id="stormCurve" width="520" height="70"></canvas>
-    <div class="storm-src">Replay of what Curiosity's RAD measured on 20 May 2024. The glow and the streaks are a visual effect.</div>`);
+    <div class="storm-src"><span id="stormRead"></span>Replay of what Curiosity's RAD measured on 20 May 2024. The glow and the streaks are a visual effect.</div>`);
   const fx = h('div', { id: 'radfx', 'aria-hidden': 'true' }, '<i></i><i></i>');
   const coach = h('section', { id: 'coach', class: 'panel', hidden: '' });
   const dock = h('nav', { id: 'dock', 'aria-label': 'Actions' });
@@ -216,7 +231,7 @@ export function setupGame(api) {
   // is. Filled circle: measured by a NASA mission. Filled diamond: a model of ours on such data.
   // Ring: computed from geometry. Hollow diamond: simulated for the demo. docs/methods.md, "Marks".
   const NUM_KIND = { elapsed: 'simulated', left: 'simulated', ret: 'model', margin: 'model', o2: 'model', effort: 'model', doseRate: 'measured',
-    nextDist: 'computed', stnTime: 'model', slope: 'measured', ground: 'model', off: 'computed', los: 'computed' };
+    nextDist: 'computed', slope: 'measured', ground: 'model', off: 'computed', los: 'computed' };
   for (const [id, kind] of Object.entries(NUM_KIND)) { const row = document.getElementById(id)?.closest('.row'); if (row) { row.dataset.kind = kind; row.title = KIND[kind]; } }
   document.getElementById('gTime').dataset.kind = 'model';
 
@@ -282,11 +297,15 @@ export function setupGame(api) {
     const limitMin = P.limitH * 60 - P.reserveMin, useG = Math.round(P.g), haveG = Math.round(P.o2G - P.o2ReserveG);
     const tog = (key, name, note) => `<button class="opt${O[key] ? ' on' : ''}" data-opt="${key}" aria-pressed="${O[key]}"><i></i><b>${name}</b><small>${note}</small></button>`;
     const pick = (key, list, label) => `<div class="seg" role="group" aria-label="${label}">${list.map((v) => `<button class="${String(O[key]) === String(v) ? 'on' : ''}" data-opt="${key}" data-val="${v}">${label === 'LOAD' ? `${v} kg` : v}</button>`).join('')}</div>`;
-    const cmp = P.compare.map((r) => `<tr class="${r.id === 'plan' ? 'mine' : ''}"><td><i class="sw r-${r.id}"></i>${ROUTE_NAMES[r.id]}</td><td>${Math.round(r.m)} m</td><td>${(r.sec / 60).toFixed(1)} min</td><td>${r.g.toFixed(1)} g</td><td>${Math.round(r.steepM)} m</td><td>${Math.round(r.shadeM)} m</td><td>${Math.round(r.towardSunM)} · ${Math.round(r.awaySunM)} m</td></tr>`).join('');
+    // SHADOW and SUN LINE appear only when some path has metres in them. At the default hour (08:08)
+    // both are 0 on every path, and two columns of zeros read as noise (owner, 2026-11-15 21:30).
+    const showShade = P.compare.some((r) => Math.round(r.shadeM) > 0);
+    const showSun = P.compare.some((r) => Math.round(r.towardSunM) + Math.round(r.awaySunM) > 0);
+    const cmp = P.compare.map((r) => `<tr class="${r.id === 'plan' ? 'mine' : ''}"><td><i class="sw r-${r.id}"></i>${ROUTE_NAMES[r.id]}</td><td>${Math.round(r.m)} m</td><td>${(r.sec / 60).toFixed(1)} min</td><td>${r.g.toFixed(1)} g</td><td>${Math.round(r.steepM)} m</td>${showShade ? `<td>${Math.round(r.shadeM)} m</td>` : ''}${showSun ? `<td>${Math.round(r.towardSunM)} · ${Math.round(r.awaySunM)} m</td>` : ''}</tr>`).join('');
     const tC = (k) => (k ? `${k - 273.15 < 0 ? '−' : ''}${Math.abs(Math.round(k - 273.15))} °C` : '--');
     return `<div class="plan-grid">
       <figure>${map}<figcaption><span><i class="sw r-plan"></i>THIS PLAN</span><span><i class="sw r-least"></i>LEAST OXYGEN ONLY</span><span><i class="sw r-short"></i>SHORTEST PATH</span><span><i class="sw steep"></i>STEEPER THAN ${steep}°</span>${D.sun0.el > 0 ? `<span><i class="sw shade"></i>IN SHADOW AT ${D.lmst}</span>` : ''}
-        <br>${KD.measured}ORBITAL IMAGE, 25 CM · ${real ? `${KD.measured}STATIONS: CURIOSITY STOPS` : `${KD.simulated}STATIONS: IMAGINED, NOT ROVER TARGETS`} · ${KD.computed}STEEP GROUND AND SHADOW: FROM THE 1 M HEIGHTS</figcaption>
+        <br><span>${KD.measured}ORBITAL IMAGE, 25 CM</span><span>${real ? `${KD.measured}STATIONS: CURIOSITY STOPS` : `${KD.simulated}STATIONS: IMAGINED, NOT ROVER TARGETS`}</span><span>${KD.computed}STEEP GROUND AND SHADOW: FROM THE 1 M HEIGHTS</span></figcaption>
         <p class="plan-day">${KD.computed}<b>LEAVE ${D.lmst} LOCAL TIME</b> · sun ${D.sun0.el > 0 ? `${Math.round(D.sun0.el)}° up in the ${compass(D.sun0.az)}` : 'not up yet'}, ${D.sun1.el > 0 ? `${Math.round(D.sun1.el)}° when you are back` : 'down when you are back'} · daylight ${D.rise} to ${D.set}<br>${KD.measured}air ${tC(D.airK)} · ground ${tC(D.groundK)} · dose on this walk ${D.doseUGy.toFixed(1)} µGy, in the instrument</p></figure>
       <div>
         <div class="plan-opts">
@@ -296,10 +315,10 @@ export function setupGame(api) {
           <div><span class="plan-h">YOU CARRY</span>${pick('loadKg', P.loads, 'LOAD')}<span class="plan-h">YOU LEAVE AT</span>${pick('depart', P.departs, 'HOUR')}</div>
           <div class="plan-bar" aria-hidden="true"><i></i></div>
         </div>
-        <table class="plan-t plan-c"><tr><th>THE SAME WALK, THREE WAYS</th><th>GROUND</th><th>WALK</th><th>OXYGEN</th><th>STEEP</th><th>SHADOW</th><th>SUN LINE</th></tr>${cmp}</table>
-        <p class="plan-note">${KD.model}Walking only, with the same oxygen model and load in every row. STEEP: metres on ground above ${steep}°. SUN LINE: metres walked toward a sun lower than ${P.sunLowDeg}° · metres walked straight away from it.</p>
+        <table class="plan-t plan-c"><tr><th>THE SAME WALK, THREE WAYS</th><th>GROUND</th><th>WALK</th><th>OXYGEN</th><th>STEEP</th>${showShade ? '<th>SHADOW</th>' : ''}${showSun ? '<th>SUN LINE</th>' : ''}</tr>${cmp}</table>
+        <p class="plan-note">${KD.model}Walking only, with the same oxygen model and load in every row. STEEP: metres on ground above ${steep}°.${showSun ? ` SUN LINE: metres walked toward a sun lower than ${P.sunLowDeg}° · metres walked straight away from it.` : ''}</p>
         <table class="plan-t"><tr><th>LEG</th><th>GROUND</th><th>WALK</th><th>WORK</th><th>OXYGEN</th></tr>${rows}
-          <tr class="sum"><td><b>THE WHOLE WALK</b></td><td>${Math.round(P.rows.reduce((a, r) => a + r.pathM, 0))} m</td><td colspan="2">${min(P.sec)} min</td><td>${useG} g</td></tr></table>
+          <tr class="sum"><td><b>THE WHOLE WALK</b></td><td>${Math.round(P.rows.reduce((a, r) => a + r.pathM, 0))} m</td><td>${min(P.rows.reduce((a, r) => a + r.sec, 0))} min</td><td>${P.rows.reduce((a, r) => a + r.workMin, 0)} min</td><td>${useG} g</td></tr></table>
         <div class="plan-sum">
           <div><span>${KD.model}CLOCK</span><b>${min(P.sec)} min</b><small>of ${limitMin} min before the ${P.reserveMin} min reserve</small></div>
           <div><span>${KD.model}OXYGEN</span><b>${useG} g</b><small>of ${haveG} g before the reserve</small></div>
@@ -352,15 +371,18 @@ export function setupGame(api) {
     document.body.classList.remove('cut'); void document.body.offsetWidth; document.body.classList.add('cut');
     spot(st.spot);
     coach.hidden = false; coach.classList.toggle('plan', !!st.plan); document.body.classList.toggle('planning', !!st.plan);
+    coach.dataset.spot = st.spot || '';   // a phone puts the card at the top when the step is about something low on the screen
     coach.innerHTML = `<header><span class="badge">GUIDED TOUR</span><span class="pips">${STEPS.map((q, i) => `<i class="${i < k ? 'past' : i === k ? 'now' : ''}" data-step="${i}" role="button" title="${i + 1} · ${q.title}"></i>`).join('')}</span><span class="count"><button class="pg" data-step="${k - 1}" aria-label="Previous step" title="Previous step"${k === 0 ? ' disabled' : ''}>‹</button>${k + 1} / ${STEPS.length}<button class="pg" data-step="${k + 1}" aria-label="Next step" title="Next step">›</button></span><button class="coach-x" aria-label="Close the guided tour" title="Close the guided tour (Esc)">×</button></header>
       <div class="body"><h2>${st.title}</h2><p>${st.body}</p>${st.plan ? planHtml() : ''}
-      ${st.why ? `<details class="why" open><summary>HOW WE KNOW</summary>${st.why.html ? st.why.html : ''}${st.why.fig ? `<img src="${import.meta.env.BASE_URL}figs/${st.why.fig}" alt="">` : ''}<p>${st.why.text}</p></details>` : ''}</div>
-      ${st.task ? `<div class="task">${st.task[0] ? `<kbd>${st.task[0]}</kbd>` : ''}<span>${st.task[1]}</span><b class="tick">✓</b></div>` : ''}
-      <footer><button class="ghost" data-go="-1"${k === 0 ? ' disabled' : ''}>BACK</button><button class="go" data-go="1"${st.goal ? ' disabled' : ''}>${k === STEPS.length - 1 ? 'FINISH' : st.plan && outCine ? 'NEXT · GO OUTSIDE' : 'NEXT'}</button></footer>`;
+      ${st.why ? `<details class="why"${PHONE ? '' : ' open'}><summary>HOW WE KNOW</summary>${st.why.html ? st.why.html : ''}${st.why.fig ? `<img src="${import.meta.env.BASE_URL}figs/${st.why.fig}" alt="">` : ''}<p>${st.why.text}</p></details>` : ''}</div>
+      ${st.task ? `<div class="task"${PHONE && st.task[0] ? ' role="button" tabindex="0"' : ''}>${st.task[0] ? `<kbd>${PHONE ? 'TAP' : st.task[0]}</kbd>` : ''}<span>${PHONE && TAP_TASK[st.task[0]] ? (st.station ? 'Tap to walk to the station, then choose' : TAP_TASK[st.task[0]][1]) : st.task[1]}</span><b class="tick">✓</b></div>` : ''}
+      <footer><button class="ghost" data-go="-1"${k === 0 ? ' disabled' : ''}>BACK</button><button class="go${st.goal ? ' wait' : ''}" data-go="1"${st.goal ? ' aria-disabled="true" title="Do the task above first, or wait a few seconds"' : ''}>${k === STEPS.length - 1 ? 'FINISH' : st.plan && outCine ? 'NEXT · GO OUTSIDE' : 'NEXT'}</button></footer>`;
     coach.querySelector('.coach-x').addEventListener('click', closeTour);
     // The marks and the two arrows at the top of the card go straight to a step, without waiting for its task (owner, 2026-11-15: "how do I see the next page").
     coach.querySelectorAll('header [data-step]').forEach((b) => b.addEventListener('click', () => { const to = Number(b.dataset.step); if (to !== step && to >= 0) { stopDemo(); showStep(to); } }));
     if (st.plan) wirePlan();
+    // On a phone there is no keyboard: the task row itself is the key (W starts the auto walk).
+    if (PHONE && st.task && TAP_TASK[st.task[0]]) coach.querySelector('.task').addEventListener('click', () => { const code = TAP_TASK[st.task[0]][0]; if (code === 'KeyP' && api.state.auto) return; api.press(code); });
     // The text of a step fades at its lower edge while more follows below it.
     const body = coach.querySelector('.body');
     body.addEventListener('scroll', fadeBody, { passive: true });
@@ -368,6 +390,8 @@ export function setupGame(api) {
     body.querySelector('details')?.addEventListener('toggle', fadeBody);
     requestAnimationFrame(fadeBody); setTimeout(fadeBody, 450);
     coach.querySelectorAll('footer button').forEach((b) => b.addEventListener('click', () => {
+      // NEXT while the task waits: the task row moves once, so the click is answered and says what is missing.
+      if (b.classList.contains('wait')) { const t = coach.querySelector('.task'); if (t) { t.classList.remove('nudge'); void t.offsetWidth; t.classList.add('nudge'); } return; }
       const out = st.plan && outCine && b.dataset.go === '1' && params.get('cine') !== '0';
       stopDemo(); showStep(step + Number(b.dataset.go));
       // From the plan to the ground: the descent plays while the walk loads behind it (owner, 2026-11-15: it stays, as the cut between the two).
@@ -430,16 +454,17 @@ export function setupGame(api) {
     if (cleared) trained = true;
     intro.hidden = false;
     intro.querySelector('.intro-card').innerHTML = `
-      ${cleared ? '<p class="intro-kicker">TOUR COMPLETE</p>' : ''}
+      <p class="intro-brand">SteadFast${cleared ? '<span>TOUR COMPLETE</span>' : ''}</p>
       <h1>${cleared ? 'You have seen the whole display.' : 'A helmet display for an astronaut walking on Mars.'}</h1>
       ${cleared ? '<p><b>Now walk it yourself.</b> The plan is the one you saw: three stations in the boxwork and the way home, with EV2 at your side. At each station the display shows why the Curiosity team looked there and what each choice leaves for the way home. Nothing is timed and nothing is scored.</p>'
-    : '<p>Earth is 20 minutes away by radio, so the crew decides on the spot. While you walk, the display answers three questions: <b>which way</b>, <b>how much time and oxygen are left</b>, and <b>when to turn back</b>.</p><p><b>Science goal:</b> the boxwork ridges on Mount Sharp, which Curiosity studied in 2025. The three stations are spots the rover team chose to photograph. At each one the display shows why the team looked there and the photo the rover took.</p><p>The place, the ground and the stations are real NASA data. The weather and the radiation replay one real day, sol 4709. The particle event is a real one from another day, 20 May 2024.</p>'}
+    // Shortened on 2026-11-15 to the words of the deck and the project page (owner: the start screen said too much).
+    : '<p>An answer from Earth takes 40 minutes, so on a walk outside the astronaut decides alone. From the data it carries, the display answers three questions: <b>which way</b>, <b>how much time and oxygen are left</b>, and <b>when to turn back</b>.</p><p>The walk crosses real NASA terrain in Gale crater, to three spots where Curiosity photographed the boxwork ridges in 2025.</p>'}
       <div class="intro-actions">
         ${trained ? '<button class="go" data-do="free">' + (fromWalk ? 'BACK TO THE WALK' : 'FREE WALK') + '</button><button class="ghost" data-do="train">GUIDED TOUR AGAIN</button>'
     : `<button class="go" data-do="train">START THE GUIDED TOUR · ${STEPS.length} STEPS</button>${fromWalk ? '<button class="ghost" data-do="free">BACK TO THE WALK</button>' : ''}`}
       </div>
       ${trained ? `<p class="intro-kicker">OR START IN A SCENARIO</p><div class="scen">${SCENARIOS.map((s, i) => `<button data-scen="${i}"><b>${s.name}</b><span>${s.note}</span></button>`).join('')}</div>` : ''}
-      <p class="intro-small">A simulation of the view through a helmet display, in a browser. Simulated: the clock, the oxygen supply, sky and light, the glow of the particle event, and every sound (key N switches it off). Made with AI tools. The second astronaut's figure is AI-generated.</p>`;
+      <p class="intro-small">A simulation of the view through a helmet display, in a browser. Simulated: the clock, the oxygen supply, sky and light, the glow of the particle event, and every sound${PHONE ? '' : ' (key N switches it off)'}. Made with AI tools. The second astronaut's figure is AI-generated.</p>`;
     intro.querySelectorAll('[data-do]').forEach((b) => b.addEventListener('click', () => {
       if (b.dataset.do === 'train') startTraining(0);
       else { if (!fromWalk) api.jumpTo({ s: 2 }); intro.hidden = true; }   // a free walk starts at the habitat, not where the last tour step stood
@@ -511,10 +536,10 @@ export function setupGame(api) {
   function goggleTick(s, e, now) {
     if (!goggle) return;
     const dt = Math.min(0.1, (now - gogLast) / 1000); gogLast = now;
-    const kelvin = (q) => (q && Number.isFinite(q.v) ? `${Math.round(q.v - 273.15)} °C` : '--');
+    const kelvin = (q) => (q && Number.isFinite(q.v) ? `${c(q.v)} °C` : '--');
     const text = GOGGLES[goggle] === 'ir'
       ? `<b>INFRARED VIEW · SIMULATED</b>Image brightness in false colour, not a temperature. REMS at the rover: ground ${kelvin(e.ground)}, air ${kelvin(e.air)}`
-      : `<b>RADIATION VIEW · SIMULATED</b>Particles cannot be seen. Flashes per second follow the RAD reading: ${s.rad.rate.toFixed(s.rad.rate < 20 ? 1 : 0)} µGy/h`;
+      : `<b>RADIATION VIEW · SIMULATED</b>Particles cannot be seen. Flashes per second follow the dose rate on the panel: ${fmtRate(s.radShown)} µGy/h`;
     if (text !== gogText) { gogText = text; gogTag.innerHTML = `${text}<small>X · NEXT VIEW</small>`; }
     if (GOGGLES[goggle] !== 'rad') return;
     const w = Math.round(innerWidth / 2), hh = Math.round(innerHeight / 2);
@@ -522,7 +547,7 @@ export function setupGame(api) {
     // What was drawn fades, then the flashes of this frame.
     gogCtx.globalCompositeOperation = 'destination-out'; gogCtx.fillStyle = `rgba(0, 0, 0, ${Math.min(1, dt * 3.5).toFixed(3)})`; gogCtx.fillRect(0, 0, w, hh);
     gogCtx.globalCompositeOperation = 'lighter';
-    gogOwed += Math.min(500, s.rad.rate * 3) * dt;
+    gogOwed += Math.min(500, s.radShown * 3) * dt;
     for (; gogOwed >= 1; gogOwed -= 1) {
       const x = gogRnd() * w, y = gogRnd() * hh, len = 2 + gogRnd() * gogRnd() * 22, a = gogRnd() * 6.283, r = 1.2 + gogRnd() * 1.8;
       gogCtx.strokeStyle = gogCtx.fillStyle = `rgba(215, 255, 235, ${(0.7 + gogRnd() * 0.3).toFixed(2)})`; gogCtx.lineWidth = 1.2;
@@ -553,23 +578,25 @@ export function setupGame(api) {
 
   const $ = (id) => document.getElementById(id);
   let lastLegend = '';
-  function tick() {
+  function tick(ts) {
     const s = api.snapshot(), e = envNow(s.elapsed), now = performance.now();
+    // The dose rate of this frame, as main.js draws it on the panel row (rad.js radShownAt).
+    s.radShown = radShownAt(s.rad.rate, ts);
     // The day.
     $('dayClock').textContent = `${e.lmst} LOCAL`;
-    $('tLink').innerHTML = `${Math.floor(e.lightMin)}<small> min </small>${String(Math.round((e.lightMin % 1) * 60)).padStart(2, '0')}<small> s</small>`;
+    const [lm, ls] = minSec(e.lightMin);
+    $('tLink').innerHTML = `${lm}<small> min </small>${String(ls).padStart(2, '0')}<small> s</small>`;
     // The small line of the dose rate. With the flicker on (rad.js) it is a strip of the last 18 s of
     // the number on the panel around the reading in force, which is the dashed line. Without it, the readings of the sol.
     if (FLICKER.on) {
-      const tk = Math.floor(now / FLICKER.stepMs);
+      const tk = Math.floor(ts / FLICKER.stepMs);
       if (tk !== stripAt && s.rad.rate > 0) { stripAt = tk; liveStrip($('tDose'), Array.from({ length: 40 }, (_, i) => radFlicker(s.rad.rate, tk - 39 + i) / s.rad.rate), s.alarm ? '#ff7aa8' : '#7dffb2'); }
     } else curve($('tDose'), radCurve('quiet'), s.elapsed, '#7dffb2', 0, 8 * 3600);
     goggleTick(s, e, now);
-    const shown = s.radLive || s.rad.rate;
-    $('dayMini').innerHTML = `${KD.measured}DOSE <b>${shown.toFixed(shown < 20 ? 1 : 0)} µGy/h</b> · ${KD.computed}EARTH <b>${Math.floor(e.lightMin)} min</b>`;
+    $('dayMini').innerHTML = `${KD.measured}DOSE <b>${fmtRate(s.radShown)} µGy/h</b> · ${KD.computed}EARTH <b>${lm} min</b>`;
     visit.tick(s, now);
     if (visit.last() && step >= 0 && STEPS[step] && STEPS[step].station) done.add('visit');
-    const focus = focusPref && step < 0 && stormK < 0.02 && !explainId;
+    const focus = focusPref && canFold();
     document.body.classList.toggle('focus', focus);
     foldHint.lastChild.textContent = focusPref ? 'SHOW EVERY READING' : 'FOLD THE PANELS';
     foldHint.classList.toggle('seen', foldSeen);
@@ -584,6 +611,7 @@ export function setupGame(api) {
     }
     // Dock: which toggles are on.
     for (const b of dock.children) {
+      if (b.dataset.code === 'Tab') b.classList.toggle('na', !canFold());
       const on = { KeyP: s.auto, KeyR: s.rad.replay, KeyC: s.classLabels, KeyM: api.world.open, KeyL: api.minimap.layer === 'geology', KeyV: state.lookDown, KeyX: goggle > 0, KeyE: s.ev2Raised, KeyG: s.agentShown, Tab: !document.body.classList.contains('focus') }[b.dataset.code];
       if (on !== undefined) b.classList.toggle('on', !!on);
     }
@@ -598,8 +626,11 @@ export function setupGame(api) {
     api.hemi.color.copy(hemiBase).lerp(hemiStorm, stormK * 0.8);
     storm.hidden = !(s.rad.replay && s.alarm) || !!explainId;
     if (!storm.hidden) {
-      $('stormRate').textContent = s.rad.rate.toFixed(s.rad.rate < 20 ? 1 : 0);
-      $('stormX').textContent = `${(s.rad.rate / s.rad.quiet).toFixed(s.rad.rate / s.rad.quiet < 10 ? 1 : 0)}× BACKGROUND · ${s.rad.utc} UTC`;
+      const x = s.radShown / s.rad.quiet;
+      $('stormRate').textContent = fmtRate(s.radShown);
+      $('stormX').textContent = `${x.toFixed(x < 10 ? 1 : 0)}× BACKGROUND · ${s.rad.utc} UTC`;
+      // The reading itself goes on the source line, as under the panel row, so the line of the big number keeps its length.
+      $('stormRead').textContent = FLICKER.on ? `RAD reading ${fmtRate(s.rad.rate)} µGy/h, the flicker around it is simulated. ` : '';
       curve($('stormCurve'), eventCurve, s.elapsed - state.alarm, '#ff8fb4', -3 * 3600, Math.min(eventEnd, 12 * 3600), true);
     }
     window.__game = { step, stormK: +stormK.toFixed(2), explain: explainId, lmst: e.lmst, airC: e.air && +(e.air.v - 273.15).toFixed(1), groundC: e.ground && +(e.ground.v - 273.15).toFixed(1), lightMin: +e.lightMin.toFixed(3) };
@@ -609,7 +640,7 @@ export function setupGame(api) {
       if (st.goal && (st.goal(s, done) || now - stepAt > (st.station ? 40000 : 15000))) {
         passed = true;
         coach.querySelector('.task')?.classList.toggle('met', st.goal(s, done));
-        coach.querySelector('.go').disabled = false;
+        const go = coach.querySelector('.go'); go.classList.remove('wait'); go.removeAttribute('aria-disabled'); go.removeAttribute('title');
       }
     }
     requestAnimationFrame(tick);
