@@ -1,0 +1,45 @@
+{
+ "note": "Made by tools/build_gale_terrain.py from NASA files. See SOURCES.md.",
+ "origin": {
+  "easting_m": 8143220.156,
+  "northing_m": -284992.705,
+  "elevation_m": -3608.689,
+  "what": "Curiosity position, sol 4709, site 120 drive 0 (MMGIS waypoints)"
+ },
+ "axes": "app x = east, app z = minus north, app y = up, metres from the origin",
+ "orbital": {
+  "size_m": 600.0,
+  "cells": 600,
+  "cell_m": 1.0,
+  "height_unit": "cm above origin, int16 LE, row 0 is the north edge",
+  "ortho_px": 2400,
+  "min_m": -52.47652734375015,
+  "max_m": 76.63724218749985
+ },
+ "near": {
+  "size_m": 48.0,
+  "cells": 960,
+  "cell_m": 0.05,
+  "detail_unit": "mm, measured minus orbital, feathered, int16 LE",
+  "measured_fraction": 0.4728830295138889,
+  "navcam_files": 44,
+  "points": 25968629,
+  "cleaning": {
+   "measured_before": 481284,
+   "rover_radius_m": 2.6,
+   "removed_rover": 2848,
+   "outlier_m": 0.12,
+   "removed_outlier": 16616,
+   "removed_thin_support": 26011,
+   "measured_after": 435809
+  }
+ },
+ "alignment_check": {
+  "what": "Navcam ground minus orbital ground on 1 m blocks that are more than half measured",
+  "blocks": 1164,
+  "median_m": 0.011886544213906357,
+  "std_m": 0.5060832782455615,
+  "p5_m": -0.9353583537669016,
+  "p95_m": 0.7632088510554023
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "note": "Ground classes from the terrain model (tools/seg/infer_sites.py), one 5 cm cell per pixel, north-up. 0 soil, 1 bedrock, 2 sand, 3 big rock, 255 no class.",
+ "classes": ["soil", "bedrock", "sand", "big rock"],
+ "model": {
+  "what": "DINOv3 ViT-B/16 with a segmentation head, fine-tuned on AI4Mars v0.6 (Curiosity and Perseverance labels), checkpoint best.pt of run dinov3_all",
+  "test": "msl_test min1, 322 Curiosity images with no name in the training set: mean IoU 0.6949 (95 % CI 0.6614 to 0.7372), soil 0.9179, bedrock 0.8191, sand 0.8664, big rock 0.176, pixel accuracy 0.9295"
+ },
+ "patches": [
+  {"name": "HAB", "file": "hab.png", "x": 0, "z": 0, "half_m": 24, "cell_m": 0.05,
+   "navcam": "sol 4709, site 120, 22 frames", "share": {"soil": 0.1327, "bedrock": 0.6884, "sand": 0.1786, "big rock": 0.0003},
+   "sha256": "417d2e32d3990fc24b5f79abfd3cc6ff194e29d4b00ff9149b0dffe9709747d8"},
+  {"name": "STN A", "file": "stn-a.png", "x": -94.947, "z": -165.571, "half_m": 24, "cell_m": 0.05,
+   "navcam": "sol 4614, site 118 drive 0, 19 frames; origin from MSL PLACES localized_pos.csv (SITE 118)", "share": {"soil": 0.5263, "bedrock": 0.2512, "sand": 0.1906, "big rock": 0.0319},
+   "sha256": "6999e61e217616b45833a2bf5e93520c818e18eee2d2ddf97370ebdba03d3d56"}
+ ]
+}

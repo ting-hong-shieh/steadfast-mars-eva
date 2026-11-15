@@ -1,0 +1,16 @@
+.env
+.env.*
+*.pem
+hack-out/
+node_modules/
+.venv/
+__pycache__/
+
+# Local working notes in Chinese. Not part of the entry. See docs/pre-event.md.
+pre-event-notes/
+.research/
+
+# The font of the slides (a copy from the Office font cache) and the PDFs that hold a part of it.
+# See writeup/figures/README.md, Figure 8.
+writeup/figures/Aptos-*.ttf
+writeup/figures/data_to_decision_slide*.pdf

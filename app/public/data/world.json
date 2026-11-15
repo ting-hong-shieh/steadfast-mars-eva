@@ -1,0 +1,78 @@
+{
+ "note": "Made by tools/build_world_relief.py from the 1 m Gale elevation mosaic (SOURCES.md S6). Colour by height is our ramp. Shading is a hillshade, light from the north-west.",
+ "image": "world_relief.jpg",
+ "px": [
+  1649,
+  2872
+ ],
+ "cell_m": 20,
+ "app_m": {
+  "x_min": -15226.663213976659,
+  "x_max": 17753.33678602334,
+  "z_min": -40211.62981056201,
+  "z_max": 17228.370189437992
+ },
+ "height_m": {
+  "low": -4540,
+  "high": -553,
+  "min": -4626,
+  "max": -323
+ },
+ "ramp": [
+  {
+   "at": 0.0,
+   "height_m": -4540,
+   "rgb": [
+    38,
+    52,
+    66
+   ]
+  },
+  {
+   "at": 0.22,
+   "height_m": -4347,
+   "rgb": [
+    86,
+    84,
+    80
+   ]
+  },
+  {
+   "at": 0.45,
+   "height_m": -3732,
+   "rgb": [
+    150,
+    106,
+    74
+   ]
+  },
+  {
+   "at": 0.7,
+   "height_m": -2586,
+   "rgb": [
+    198,
+    134,
+    86
+   ]
+  },
+  {
+   "at": 0.88,
+   "height_m": -1453,
+   "rgb": [
+    232,
+    190,
+    150
+   ]
+  },
+  {
+   "at": 1.0,
+   "height_m": -553,
+   "rgb": [
+    250,
+    236,
+    220
+   ]
+  }
+ ],
+ "valid_fraction": 0.8185
+}

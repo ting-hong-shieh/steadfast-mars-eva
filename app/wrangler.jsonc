@@ -1,0 +1,15 @@
+{
+  // Public deployment of the built app as Cloudflare Workers static assets.
+  // No Worker code runs: every request is served from ./dist.
+  // Deploy: npm run deploy (builds first). Only the lead holds the account login.
+  "name": "steadfast",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist"
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "steadfast.eliasshieh.com", "custom_domain": true }
+  ]
+}

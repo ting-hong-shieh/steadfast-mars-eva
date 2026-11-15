@@ -1,0 +1,20 @@
+{
+ "note": "Made by tools/build_site_terrain.py from NASA files. See SOURCES.md S6, S7, S31.",
+ "origin": {
+  "easting_m": 8144872.624,
+  "northing_m": -280593.793,
+  "elevation_m": -4081.515869140625,
+  "what": "Curiosity stop, sol 3036, site 86 drive 1840 (MSL PLACES localized_pos.csv); height from the 1 m elevation model at that point"
+ },
+ "axes": "app x = east, app z = minus north, app y = up, metres from the origin",
+ "orbital": {
+  "size_m": 600.0,
+  "cells": 600,
+  "cell_m": 1.0,
+  "height_unit": "cm above origin, int16 LE, row 0 is the north edge",
+  "ortho_px": 2400,
+  "min_m": -33.889892578125,
+  "max_m": 33.978515625
+ },
+ "near": null
+}

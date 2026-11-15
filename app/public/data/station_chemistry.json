@@ -1,0 +1,1266 @@
+{
+ "source": "NASA Planetary Data System, Geosciences Node: MSL APXS RDR (MSL-M-APXS-4/5-RDR-V1.0, concentration tables) and MSL ChemCam LIBS RDR (MSL-M-CHEMCAM-LIBS-4/5-RDR-V1.0, MOC tables and observation table)",
+ "cite": [
+  "Gellert, R., Mars Science Laboratory Alpha Particle X-Ray Spectrometer RDR Data V1.0, MSL-M-APXS-4/5-RDR-V1.0, NASA Planetary Data System, 2013.",
+  "Wiens, R., MSL ChemCam Laser Induced Breakdown Spectrometer derived data, MSL-M-CHEMCAM-LIBS-5-RDR-V1.0, NASA Planetary Data System, 2013."
+ ],
+ "unit": "weight percent (APXS trace elements in ppm)",
+ "columns": [
+  "SiO2",
+  "FeO",
+  "MgO",
+  "SO3",
+  "Al2O3",
+  "CaO"
+ ],
+ "columns_rule": "oxides above 5 weight percent in at least one APXS row at the stations, largest first. MnO never",
+ "inputs": [
+  {
+   "file": "msl_apxs_concentrations_4613_4709.csv",
+   "url": "https://pds-geosciences.wustl.edu/msl/msl-m-apxs-4_5-rdr-v1/mslapx_1xxx/extras/msl_apxs_concentrations_4613_4709.csv",
+   "bytes": 16007,
+   "sha256": "c0ebd3c2a832162a8d661c3543d1107edd926fe02e584c1bcb3a874876eb9e1f"
+  },
+  {
+   "file": "msl_apxs_concentrations_4710_4843.csv",
+   "url": "https://pds-geosciences.wustl.edu/msl/msl-m-apxs-4_5-rdr-v1/mslapx_1xxx/extras/msl_apxs_concentrations_4710_4843.csv",
+   "bytes": 12110,
+   "sha256": "c0d42310c9599a174d79916742054f3b5c72a0622a0e9aaba5a21efb540a221e"
+  },
+  {
+   "file": "moc_4613_4709.csv",
+   "url": "https://pds-geosciences.wustl.edu/msl/msl-m-chemcam-libs-4_5-rdr-v1/mslccm_1xxx/data/moc/moc_4613_4709.csv",
+   "bytes": 101261,
+   "sha256": "b9c102f63edeb6d4af966e72404d5e553ef091273f17920730c9d7a09d5e9a35"
+  },
+  {
+   "file": "moc_4710_4843.csv",
+   "url": "https://pds-geosciences.wustl.edu/msl/msl-m-chemcam-libs-4_5-rdr-v1/mslccm_1xxx/data/moc/moc_4710_4843.csv",
+   "bytes": 77157,
+   "sha256": "ec059ff3d429a25ae8e391ed8ae261281a46d9efdb5b64d86cf0a6cf5ea31bde"
+  },
+  {
+   "file": "msl_ccam_obs.csv",
+   "url": "https://pds-geosciences.wustl.edu/msl/msl-m-chemcam-libs-4_5-rdr-v1/mslccm_1xxx/document/msl_ccam_obs.csv",
+   "bytes": 26294662,
+   "sha256": "650df2f29dae0297e8de207645f8196fc8875fcec02140cbfd8472b00ba99545"
+  }
+ ],
+ "stations": [
+  {
+   "id": "STN A",
+   "site": 118,
+   "drive": 0,
+   "sols": [
+    4615,
+    4616
+   ],
+   "apxs": [
+    {
+     "target": "El_Salto_DRT",
+     "sol": 4616,
+     "start_lmst": "04616M10:28:02",
+     "lifetime": "00:22:00",
+     "norm": 71.8,
+     "fe_fwhm_ev": 175.9,
+     "fit": "RGFit_v2",
+     "wt": {
+      "Na2O": [
+       3.05,
+       0.2
+      ],
+      "MgO": [
+       5.81,
+       0.17
+      ],
+      "Al2O3": [
+       6.65,
+       0.19
+      ],
+      "SiO2": [
+       37.02,
+       0.54
+      ],
+      "P2O5": [
+       0.9,
+       0.07
+      ],
+      "SO3": [
+       14.12,
+       0.28
+      ],
+      "Cl": [
+       3.02,
+       0.08
+      ],
+      "K2O": [
+       0.59,
+       0.04
+      ],
+      "CaO": [
+       7.57,
+       0.11
+      ],
+      "TiO2": [
+       0.82,
+       0.07
+      ],
+      "Cr2O3": [
+       0.34,
+       0.03
+      ],
+      "MnO": [
+       0.21,
+       0.03
+      ],
+      "FeO": [
+       19.57,
+       0.26
+      ]
+     },
+     "ppm": {
+      "Ni": [
+       693,
+       55
+      ],
+      "Zn": [
+       600,
+       35
+      ],
+      "Br": [
+       886,
+       30
+      ]
+     },
+     "source_files": [
+      "APB_807269504ESC46161180000_______M1.DAT",
+      "APB_807268619ESC46161180000_______M1.DAT"
+     ],
+     "table": "msl_apxs_concentrations_4613_4709.csv"
+    }
+   ],
+   "chemcam": [
+    {
+     "target": "aegis_post_4615a",
+     "sol": 4615,
+     "type": "AEGIS-selected bedrock",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      3.86,
+      3.86
+     ],
+     "sum_of_oxides": [
+      89.02,
+      101.29
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 49.6,
+       "min": 42.7,
+       "max": 55.3,
+       "rmsep": [
+        5.0,
+        5.2
+       ]
+      },
+      "TiO2": {
+       "median": 0.81,
+       "min": 0.68,
+       "max": 0.84,
+       "rmsep": [
+        0.42,
+        0.46
+       ]
+      },
+      "Al2O3": {
+       "median": 11.4,
+       "min": 9.3,
+       "max": 12.2,
+       "rmsep": [
+        3.5,
+        3.6
+       ]
+      },
+      "FeO": {
+       "median": 18.8,
+       "min": 13.2,
+       "max": 19.3,
+       "rmsep": [
+        3.1,
+        3.8
+       ]
+      },
+      "MgO": {
+       "median": 7.8,
+       "min": 5.3,
+       "max": 12.3,
+       "rmsep": [
+        1.9,
+        2.9
+       ]
+      },
+      "CaO": {
+       "median": 2.8,
+       "min": 0.5,
+       "max": 6.7,
+       "rmsep": [
+        0.9,
+        2.2
+       ]
+      },
+      "Na2O": {
+       "median": 3.01,
+       "min": 1.94,
+       "max": 12.3,
+       "rmsep": [
+        0.62,
+        1.35
+       ]
+      },
+      "K2O": {
+       "median": 0.43,
+       "min": 0.29,
+       "max": 0.65,
+       "rmsep": [
+        0.59,
+        0.72
+       ]
+      },
+      "MnO": {
+       "median": 0.1,
+       "min": 0.04,
+       "max": 0.15,
+       "rmsep": [
+        0.03,
+        0.06
+       ]
+      }
+     },
+     "outside_test_set": {
+      "Na2O": 2
+     },
+     "source_files": [
+      "CL5_807187366CCS_F1180000CCAM04614P3.CSV",
+      "CL5_807187446CCS_F1180000CCAM04614P3.CSV",
+      "CL5_807187520CCS_F1180000CCAM04614P3.CSV",
+      "CL5_807187594CCS_F1180000CCAM04614P3.CSV",
+      "CL5_807187679CCS_F1180000CCAM04614P3.CSV"
+     ],
+     "table": "moc_4613_4709.csv"
+    },
+    {
+     "target": "El_Salto_ccam",
+     "sol": 4616,
+     "type": "Ridge material",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      2.57,
+      2.57
+     ],
+     "sum_of_oxides": [
+      79.2,
+      97.13
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 50.6,
+       "min": 32.4,
+       "max": 53.5,
+       "rmsep": [
+        5.0,
+        6.6
+       ]
+      },
+      "TiO2": {
+       "median": 0.8,
+       "min": 0.64,
+       "max": 0.83,
+       "rmsep": [
+        0.4,
+        0.46
+       ]
+      },
+      "Al2O3": {
+       "median": 10.4,
+       "min": 6.2,
+       "max": 12.1,
+       "rmsep": [
+        3.2,
+        3.6
+       ]
+      },
+      "FeO": {
+       "median": 18.4,
+       "min": 17.1,
+       "max": 19.7,
+       "rmsep": [
+        3.6,
+        3.9
+       ]
+      },
+      "MgO": {
+       "median": 6.6,
+       "min": 3.5,
+       "max": 7.3,
+       "rmsep": [
+        1.7,
+        2.2
+       ]
+      },
+      "CaO": {
+       "median": 2.3,
+       "min": 1.7,
+       "max": 16.0,
+       "rmsep": [
+        1.0,
+        3.5
+       ]
+      },
+      "Na2O": {
+       "median": 2.61,
+       "min": 1.59,
+       "max": 2.88,
+       "rmsep": [
+        0.62,
+        0.63
+       ]
+      },
+      "K2O": {
+       "median": 0.84,
+       "min": 0.3,
+       "max": 0.97,
+       "rmsep": [
+        0.6,
+        0.85
+       ]
+      },
+      "MnO": {
+       "median": 0.12,
+       "min": 0.11,
+       "max": 0.17,
+       "rmsep": [
+        0.05,
+        0.06
+       ]
+      }
+     },
+     "outside_test_set": {},
+     "source_files": [
+      "CL5_807274379CCS_F1180000CCAM01616P3.CSV",
+      "CL5_807274466CCS_F1180000CCAM01616P3.CSV",
+      "CL5_807274543CCS_F1180000CCAM01616P3.CSV",
+      "CL5_807274620CCS_F1180000CCAM01616P3.CSV",
+      "CL5_807274697CCS_F1180000CCAM01616P3.CSV"
+     ],
+     "table": "moc_4613_4709.csv"
+    }
+   ]
+  },
+  {
+   "id": "STN B",
+   "site": 120,
+   "drive": 2366,
+   "sols": [
+    4828,
+    4829,
+    4830
+   ],
+   "apxs": [
+    {
+     "target": "Collahuasi",
+     "sol": 4829,
+     "start_lmst": "04829M17:43:28",
+     "lifetime": "01:35:00",
+     "norm": 50.8,
+     "fe_fwhm_ev": 190.3,
+     "fit": "RGFit_v2",
+     "wt": {
+      "Na2O": [
+       2.71,
+       0.14
+      ],
+      "MgO": [
+       7.73,
+       0.17
+      ],
+      "Al2O3": [
+       8.09,
+       0.19
+      ],
+      "SiO2": [
+       42.8,
+       0.54
+      ],
+      "P2O5": [
+       0.85,
+       0.05
+      ],
+      "SO3": [
+       8.68,
+       0.15
+      ],
+      "Cl": [
+       1.42,
+       0.04
+      ],
+      "K2O": [
+       0.56,
+       0.02
+      ],
+      "CaO": [
+       6.26,
+       0.07
+      ],
+      "TiO2": [
+       0.97,
+       0.05
+      ],
+      "Cr2O3": [
+       0.37,
+       0.03
+      ],
+      "MnO": [
+       0.08,
+       0.03
+      ],
+      "FeO": [
+       19.04,
+       0.2
+      ]
+     },
+     "ppm": {
+      "Ni": [
+       573,
+       30
+      ],
+      "Zn": [
+       408,
+       20
+      ],
+      "Br": [
+       565,
+       20
+      ]
+     },
+     "source_files": [
+      "APB_826205920ESC48291202366_______M1.DAT",
+      "APB_826210139ESC48291202366_______M1.DAT"
+     ],
+     "table": "msl_apxs_concentrations_4710_4843.csv"
+    },
+    {
+     "target": "Thola",
+     "sol": 4829,
+     "start_lmst": "04829M19:37:24",
+     "lifetime": "02:00:00",
+     "norm": 73.2,
+     "fe_fwhm_ev": 166,
+     "fit": "RGFit_v2",
+     "wt": {
+      "Na2O": [
+       2.02,
+       0.14
+      ],
+      "MgO": [
+       20.1,
+       0.42
+      ],
+      "Al2O3": [
+       4.76,
+       0.19
+      ],
+      "SiO2": [
+       40.46,
+       0.43
+      ],
+      "P2O5": [
+       0.64,
+       0.05
+      ],
+      "SO3": [
+       5.65,
+       0.1
+      ],
+      "Cl": [
+       0.82,
+       0.02
+      ],
+      "K2O": [
+       0.16,
+       0.01
+      ],
+      "CaO": [
+       3.04,
+       0.04
+      ],
+      "TiO2": [
+       0.31,
+       0.02
+      ],
+      "Cr2O3": [
+       0.68,
+       0.03
+      ],
+      "MnO": [
+       0.29,
+       0.01
+      ],
+      "FeO": [
+       20.62,
+       0.26
+      ]
+     },
+     "ppm": {
+      "Ni": [
+       4056,
+       205
+      ],
+      "Zn": [
+       88,
+       10
+      ],
+      "Br": [
+       44,
+       5
+      ]
+     },
+     "source_files": [
+      "APB_826218363ESC48291202366_______M1.DAT",
+      "APB_826214443ESC48291202366_______M1.DAT"
+     ],
+     "table": "msl_apxs_concentrations_4710_4843.csv"
+    }
+   ],
+   "chemcam": [
+    {
+     "target": "aegis_post_4828a",
+     "sol": 4828,
+     "type": "AEGIS-selected bedrock",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      2.83,
+      2.83
+     ],
+     "sum_of_oxides": [
+      82.84,
+      95.37
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 41.8,
+       "min": 36.4,
+       "max": 48.5,
+       "rmsep": [
+        5.0,
+        6.0
+       ]
+      },
+      "TiO2": {
+       "median": 0.71,
+       "min": 0.67,
+       "max": 0.85,
+       "rmsep": [
+        0.41,
+        0.46
+       ]
+      },
+      "Al2O3": {
+       "median": 8.9,
+       "min": 7.5,
+       "max": 11.4,
+       "rmsep": [
+        3.4,
+        3.5
+       ]
+      },
+      "FeO": {
+       "median": 15.9,
+       "min": 14.9,
+       "max": 19.9,
+       "rmsep": [
+        3.3,
+        3.9
+       ]
+      },
+      "MgO": {
+       "median": 3.5,
+       "min": 3.3,
+       "max": 9.1,
+       "rmsep": [
+        1.7,
+        2.5
+       ]
+      },
+      "CaO": {
+       "median": 15.5,
+       "min": 3.2,
+       "max": 18.3,
+       "rmsep": [
+        1.3,
+        3.8
+       ]
+      },
+      "Na2O": {
+       "median": 1.48,
+       "min": 1.18,
+       "max": 2.3,
+       "rmsep": [
+        0.59,
+        0.63
+       ]
+      },
+      "K2O": {
+       "median": 0.59,
+       "min": 0.41,
+       "max": 0.71,
+       "rmsep": [
+        0.63,
+        0.75
+       ]
+      },
+      "MnO": {
+       "median": 0.18,
+       "min": 0.15,
+       "max": 0.22,
+       "rmsep": [
+        0.06,
+        0.07
+       ]
+      }
+     },
+     "outside_test_set": {},
+     "source_files": [
+      "CL5_826087344CCS_F1202366CCAM09825P3.CSV",
+      "CL5_826087425CCS_F1202366CCAM09825P3.CSV",
+      "CL5_826087500CCS_F1202366CCAM09825P3.CSV",
+      "CL5_826087575CCS_F1202366CCAM09825P3.CSV",
+      "CL5_826087650CCS_F1202366CCAM09825P3.CSV"
+     ],
+     "table": "moc_4710_4843.csv"
+    },
+    {
+     "target": "Alto_Mairana",
+     "sol": 4829,
+     "type": "Vein",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      2.3,
+      2.3
+     ],
+     "sum_of_oxides": [
+      90.34,
+      95.09
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 49.2,
+       "min": 46.8,
+       "max": 51.0,
+       "rmsep": [
+        5.0,
+        5.0
+       ]
+      },
+      "TiO2": {
+       "median": 0.79,
+       "min": 0.7,
+       "max": 0.81,
+       "rmsep": [
+        0.42,
+        0.45
+       ]
+      },
+      "Al2O3": {
+       "median": 9.5,
+       "min": 8.7,
+       "max": 10.8,
+       "rmsep": [
+        3.5,
+        3.5
+       ]
+      },
+      "FeO": {
+       "median": 17.1,
+       "min": 16.3,
+       "max": 17.9,
+       "rmsep": [
+        3.5,
+        3.7
+       ]
+      },
+      "MgO": {
+       "median": 9.1,
+       "min": 7.8,
+       "max": 13.7,
+       "rmsep": [
+        2.3,
+        3.1
+       ]
+      },
+      "CaO": {
+       "median": 3.7,
+       "min": 3.2,
+       "max": 4.3,
+       "rmsep": [
+        1.3,
+        1.5
+       ]
+      },
+      "Na2O": {
+       "median": 2.3,
+       "min": 1.51,
+       "max": 2.38,
+       "rmsep": [
+        0.62,
+        0.63
+       ]
+      },
+      "K2O": {
+       "median": 0.44,
+       "min": 0.23,
+       "max": 0.6,
+       "rmsep": [
+        0.58,
+        0.7
+       ]
+      },
+      "MnO": {
+       "median": 0.1,
+       "min": 0.04,
+       "max": 0.12,
+       "rmsep": [
+        0.03,
+        0.05
+       ]
+      }
+     },
+     "outside_test_set": {},
+     "source_files": [
+      "CL5_826177616CCS_F1202366CCAM01829P3.CSV",
+      "CL5_826177697CCS_F1202366CCAM01829P3.CSV",
+      "CL5_826177771CCS_F1202366CCAM01829P3.CSV",
+      "CL5_826177846CCS_F1202366CCAM01829P3.CSV",
+      "CL5_826177921CCS_F1202366CCAM01829P3.CSV"
+     ],
+     "table": "moc_4710_4843.csv"
+    },
+    {
+     "target": "Collahuasi_ccam",
+     "sol": 4830,
+     "type": "Bedrock",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      2.41,
+      2.42
+     ],
+     "sum_of_oxides": [
+      94.37,
+      96.23
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 51.1,
+       "min": 49.5,
+       "max": 52.3,
+       "rmsep": [
+        5.0,
+        5.0
+       ]
+      },
+      "TiO2": {
+       "median": 0.83,
+       "min": 0.83,
+       "max": 0.87,
+       "rmsep": [
+        0.46,
+        0.47
+       ]
+      },
+      "Al2O3": {
+       "median": 11.5,
+       "min": 11.4,
+       "max": 12.0,
+       "rmsep": [
+        3.5,
+        3.6
+       ]
+      },
+      "FeO": {
+       "median": 18.2,
+       "min": 15.9,
+       "max": 18.4,
+       "rmsep": [
+        3.5,
+        3.8
+       ]
+      },
+      "MgO": {
+       "median": 6.5,
+       "min": 6.2,
+       "max": 7.5,
+       "rmsep": [
+        2.0,
+        2.2
+       ]
+      },
+      "CaO": {
+       "median": 4.4,
+       "min": 4.1,
+       "max": 4.8,
+       "rmsep": [
+        1.5,
+        1.7
+       ]
+      },
+      "Na2O": {
+       "median": 2.3,
+       "min": 2.19,
+       "max": 2.46,
+       "rmsep": [
+        0.62,
+        0.62
+       ]
+      },
+      "K2O": {
+       "median": 0.6,
+       "min": 0.58,
+       "max": 0.65,
+       "rmsep": [
+        0.7,
+        0.72
+       ]
+      },
+      "MnO": {
+       "median": 0.12,
+       "min": 0.1,
+       "max": 0.15,
+       "rmsep": [
+        0.05,
+        0.06
+       ]
+      }
+     },
+     "outside_test_set": {},
+     "source_files": [
+      "CL5_826265733CCS_F1202366CCAM04829P3.CSV",
+      "CL5_826265821CCS_F1202366CCAM04829P3.CSV",
+      "CL5_826265897CCS_F1202366CCAM04829P3.CSV",
+      "CL5_826265974CCS_F1202366CCAM04829P3.CSV",
+      "CL5_826266056CCS_F1202366CCAM04829P3.CSV"
+     ],
+     "table": "moc_4710_4843.csv"
+    }
+   ]
+  },
+  {
+   "id": "STN C",
+   "site": 121,
+   "drive": 156,
+   "sols": [
+    4838,
+    4839
+   ],
+   "apxs": [
+    {
+     "target": "Toro_Wharku_offset",
+     "sol": 4838,
+     "start_lmst": "04838M17:53:54",
+     "lifetime": "01:32:24",
+     "norm": 68.4,
+     "fe_fwhm_ev": 206.6,
+     "fit": "RGFit_v2",
+     "wt": {
+      "Na2O": [
+       2.37,
+       0.14
+      ],
+      "MgO": [
+       5.51,
+       0.33
+      ],
+      "Al2O3": [
+       8.3,
+       0.48
+      ],
+      "SiO2": [
+       46.31,
+       0.96
+      ],
+      "P2O5": [
+       0.82,
+       0.09
+      ],
+      "SO3": [
+       8,
+       0.43
+      ],
+      "Cl": [
+       1.16,
+       0.06
+      ],
+      "K2O": [
+       0.66,
+       0.04
+      ],
+      "CaO": [
+       6.26,
+       0.32
+      ],
+      "TiO2": [
+       0.88,
+       0.05
+      ],
+      "Cr2O3": [
+       0.38,
+       0.03
+      ],
+      "MnO": [
+       0.03,
+       0.04
+      ],
+      "FeO": [
+       18.78,
+       0.39
+      ]
+     },
+     "ppm": {
+      "Ni": [
+       526,
+       30
+      ],
+      "Zn": [
+       383,
+       20
+      ],
+      "Br": [
+       481,
+       25
+      ]
+     },
+     "source_files": [
+      "APB_827005232ESC48381210156_______M1.DAT",
+      "APB_827009152ESC48381210156_______M1.DAT"
+     ],
+     "table": "msl_apxs_concentrations_4710_4843.csv"
+    },
+    {
+     "target": "Toro_Wharku_DRT",
+     "sol": 4838,
+     "start_lmst": "04838M19:44:55",
+     "lifetime": "02:00:00",
+     "norm": 69.9,
+     "fe_fwhm_ev": 171.6,
+     "fit": "RGFit_v2",
+     "wt": {
+      "Na2O": [
+       2.57,
+       0.14
+      ],
+      "MgO": [
+       4.94,
+       0.17
+      ],
+      "Al2O3": [
+       9.09,
+       0.19
+      ],
+      "SiO2": [
+       47.54,
+       0.54
+      ],
+      "P2O5": [
+       1.02,
+       0.07
+      ],
+      "SO3": [
+       6.4,
+       0.1
+      ],
+      "Cl": [
+       0.94,
+       0.03
+      ],
+      "K2O": [
+       0.69,
+       0.02
+      ],
+      "CaO": [
+       5.98,
+       0.07
+      ],
+      "TiO2": [
+       0.9,
+       0.03
+      ],
+      "Cr2O3": [
+       0.38,
+       0.01
+      ],
+      "MnO": [
+       0.17,
+       0.01
+      ],
+      "FeO": [
+       18.98,
+       0.2
+      ]
+     },
+     "ppm": {
+      "Ni": [
+       574,
+       30
+      ],
+      "Zn": [
+       359,
+       15
+      ],
+      "Br": [
+       622,
+       20
+      ]
+     },
+     "source_files": [
+      "APB_827018095ESC48381210156_______M1.DAT",
+      "APB_827013875ESC48381210156_______M1.DAT"
+     ],
+     "table": "msl_apxs_concentrations_4710_4843.csv"
+    }
+   ],
+   "chemcam": [
+    {
+     "target": "Tacitas",
+     "sol": 4838,
+     "type": "Raised bedrock",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      2.26,
+      2.26
+     ],
+     "sum_of_oxides": [
+      91.75,
+      94.3
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 47.7,
+       "min": 46.2,
+       "max": 48.9,
+       "rmsep": [
+        5.0,
+        5.0
+       ]
+      },
+      "TiO2": {
+       "median": 0.79,
+       "min": 0.75,
+       "max": 0.84,
+       "rmsep": [
+        0.44,
+        0.46
+       ]
+      },
+      "Al2O3": {
+       "median": 10.1,
+       "min": 9.7,
+       "max": 10.5,
+       "rmsep": [
+        3.5,
+        3.5
+       ]
+      },
+      "FeO": {
+       "median": 17.5,
+       "min": 17.0,
+       "max": 18.9,
+       "rmsep": [
+        3.6,
+        3.8
+       ]
+      },
+      "MgO": {
+       "median": 8.7,
+       "min": 6.0,
+       "max": 9.4,
+       "rmsep": [
+        2.0,
+        2.5
+       ]
+      },
+      "CaO": {
+       "median": 6.0,
+       "min": 4.8,
+       "max": 6.3,
+       "rmsep": [
+        1.7,
+        2.1
+       ]
+      },
+      "Na2O": {
+       "median": 2.24,
+       "min": 2.13,
+       "max": 2.33,
+       "rmsep": [
+        0.62,
+        0.62
+       ]
+      },
+      "K2O": {
+       "median": 0.65,
+       "min": 0.55,
+       "max": 0.78,
+       "rmsep": [
+        0.69,
+        0.78
+       ]
+      },
+      "MnO": {
+       "median": 0.13,
+       "min": 0.13,
+       "max": 0.15,
+       "rmsep": [
+        0.05,
+        0.06
+       ]
+      }
+     },
+     "outside_test_set": {},
+     "source_files": [
+      "CL5_826976579CCS_F1210156CCAM01838P3.CSV",
+      "CL5_826976667CCS_F1210156CCAM01838P3.CSV",
+      "CL5_826976743CCS_F1210156CCAM01838P3.CSV",
+      "CL5_826976820CCS_F1210156CCAM01838P3.CSV",
+      "CL5_826976896CCS_F1210156CCAM01838P3.CSV"
+     ],
+     "table": "moc_4710_4843.csv"
+    },
+    {
+     "target": "Toro_Wharku_ccam",
+     "sol": 4839,
+     "type": "Bedrock",
+     "points": 5,
+     "shots_per_point": [
+      30
+     ],
+     "distance_m": [
+      2.25,
+      2.25
+     ],
+     "sum_of_oxides": [
+      90.95,
+      94.33
+     ],
+     "wt": {
+      "SiO2": {
+       "median": 48.7,
+       "min": 46.8,
+       "max": 50.2,
+       "rmsep": [
+        5.0,
+        5.0
+       ]
+      },
+      "TiO2": {
+       "median": 0.82,
+       "min": 0.78,
+       "max": 0.88,
+       "rmsep": [
+        0.44,
+        0.47
+       ]
+      },
+      "Al2O3": {
+       "median": 10.7,
+       "min": 9.8,
+       "max": 11.1,
+       "rmsep": [
+        3.5,
+        3.5
+       ]
+      },
+      "FeO": {
+       "median": 17.6,
+       "min": 16.1,
+       "max": 18.3,
+       "rmsep": [
+        3.5,
+        3.7
+       ]
+      },
+      "MgO": {
+       "median": 4.6,
+       "min": 4.4,
+       "max": 4.9,
+       "rmsep": [
+        1.8,
+        1.9
+       ]
+      },
+      "CaO": {
+       "median": 7.9,
+       "min": 6.9,
+       "max": 9.1,
+       "rmsep": [
+        2.2,
+        2.7
+       ]
+      },
+      "Na2O": {
+       "median": 2.19,
+       "min": 2.14,
+       "max": 2.38,
+       "rmsep": [
+        0.62,
+        0.62
+       ]
+      },
+      "K2O": {
+       "median": 0.54,
+       "min": 0.51,
+       "max": 0.61,
+       "rmsep": [
+        0.67,
+        0.71
+       ]
+      },
+      "MnO": {
+       "median": 0.12,
+       "min": 0.1,
+       "max": 0.15,
+       "rmsep": [
+        0.05,
+        0.06
+       ]
+      }
+     },
+     "outside_test_set": {},
+     "source_files": [
+      "CL5_827064525CCS_F1210156CCAM03838P3.CSV",
+      "CL5_827064606CCS_F1210156CCAM03838P3.CSV",
+      "CL5_827064681CCS_F1210156CCAM03838P3.CSV",
+      "CL5_827064756CCS_F1210156CCAM03838P3.CSV",
+      "CL5_827064831CCS_F1210156CCAM03838P3.CSV"
+     ],
+     "table": "moc_4710_4843.csv"
+    }
+   ]
+  }
+ ]
+}

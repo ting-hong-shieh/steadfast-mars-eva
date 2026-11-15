@@ -1,0 +1,85 @@
+{
+ "note": "Made by tools/build_site_terrain.py. Each place is a real Curiosity stop (MSL PLACES, S31). x and z are app metres from the main place (sol 4709): x east, z minus north. yaw_deg is the rover's heading at the stop, clockwise from north. elevation_m is the 1 m elevation model (S6) at the stop. Which stops are offered is our choice.",
+ "main": {
+  "id": "sol4709",
+  "sol": 4709,
+  "site": 120,
+  "drive": 0,
+  "x": 0,
+  "z": 0,
+  "elevation_m": -3608.689,
+  "yaw_deg": -124.159
+ },
+ "sites": [
+  {
+   "id": "sol0000",
+   "sol": 0,
+   "site": 1,
+   "drive": 0,
+   "x": 3591.1,
+   "z": -12953.4,
+   "lon": 137.441632997,
+   "lat": -4.589466996,
+   "elevation_m": -4501.0,
+   "places_elevation_m": -4501.04,
+   "relief_m": 21.8,
+   "yaw_deg": 112.722
+  },
+  {
+   "id": "sol0717",
+   "sol": 717,
+   "site": 40,
+   "drive": 1286,
+   "x": 99.9,
+   "z": -8776.4,
+   "lon": 137.382734712,
+   "lat": -4.659935378,
+   "elevation_m": -4456.9,
+   "places_elevation_m": -4456.76,
+   "relief_m": 35.4,
+   "yaw_deg": -163.279
+  },
+  {
+   "id": "sol1720",
+   "sol": 1720,
+   "site": 63,
+   "drive": 2978,
+   "x": -972.7,
+   "z": -5174.3,
+   "lon": 137.364638863,
+   "lat": -4.720705726,
+   "elevation_m": -4257.3,
+   "places_elevation_m": -4257.31,
+   "relief_m": 105.6,
+   "yaw_deg": 135.046
+  },
+  {
+   "id": "sol3036",
+   "sol": 3036,
+   "site": 86,
+   "drive": 1840,
+   "x": 1652.5,
+   "z": -4398.9,
+   "lon": 137.408927659,
+   "lat": -4.733787007,
+   "elevation_m": -4081.5,
+   "places_elevation_m": -4081.48,
+   "relief_m": 67.9,
+   "yaw_deg": 87.801
+  },
+  {
+   "id": "sol4098",
+   "sol": 4098,
+   "site": 106,
+   "drive": 438,
+   "x": 1536.8,
+   "z": -1660.2,
+   "lon": 137.406977029,
+   "lat": -4.77999028,
+   "elevation_m": -3733.6,
+   "places_elevation_m": -3733.53,
+   "relief_m": 188.2,
+   "yaw_deg": 103.038
+  }
+ ]
+}
