@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Icon of SteadFast. Drawn as code with an AI tool (Claude). See AI_USE.md. -->
+  <title>SteadFast</title>
+  <desc>The lit route of the helmet display: three arrowheads that point ahead, the nearest one brightest. Drawn with an AI tool. It holds no logo of NASA or of any other body.</desc>
+  <rect width="64" height="64" rx="14" fill="#07090b"/>
+  <g fill="none" stroke="#6fe3ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 51 32 39 46 51"/>
+    <path d="M21 35.5 32 26 43 35.5" opacity="0.7"/>
+    <path d="M24 21.5 32 14.5 40 21.5" opacity="0.4"/>
+  </g>
+</svg>

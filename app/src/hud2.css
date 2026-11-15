@@ -329,7 +329,7 @@ body.focus #layers:not(:hover)::before { content: "9 DATA LAYERS · CLICK  ▾";
 #layers button { cursor: pointer; padding: 5px 10px; box-shadow: inset 0 0 0 1px rgba(242, 245, 247, 0.22); border-radius: 3px; } #layers { gap: 8px; }
 #layers button::after { content: "›"; margin-left: 2px; color: var(--ink-3); }
 #layers button:hover, #layers button.on { box-shadow: inset 0 0 0 1.5px var(--kc); background: rgba(242, 245, 247, 0.08) !important; }
-#minimap { cursor: pointer; } #minimap::after { content: "CLICK OR M · WORLD MAP"; position: absolute; left: -20px; right: -20px; top: -26px; text-align: center; font-size: 12px; letter-spacing: 0.06em; color: var(--guide); pointer-events: none; }
+#minimap { cursor: pointer; }   /* a click still opens the world map; the line that said so is gone (owner, 2026-11-15: the map is not what the product is about) */
 #minimap:hover { filter: brightness(1.2); }
 #coach details.why summary { cursor: pointer; }
 ol.pipe { list-style: none; margin: 10px 0 6px; padding: 0; display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr; gap: 10px; }
@@ -462,7 +462,22 @@ ul.plan-why { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; 
 
 /* The plan screen lets the crew choose what the route considers (team's idea of 2026-11-15). */
 #coach.plan { width: min(1180px, 95vw) !important; max-height: 96vh; }
-#coach.plan.busy .plan-grid { opacity: 0.45; pointer-events: none; } #coach.plan.busy { cursor: progress; }
+/* While the route is planned again: the choice is already marked, a bar moves under the choices, and the numbers that are about to change go pale. */
+#coach.plan.busy .plan-grid { pointer-events: none; } #coach.plan.busy { cursor: progress; }
+#coach.plan .plan-grid table, #coach.plan .plan-sum, #coach.plan .plan-day, .plan-map polyline { transition: opacity 0.18s ease; }
+#coach.plan.busy .plan-grid table, #coach.plan.busy .plan-sum, #coach.plan.busy .plan-day { opacity: 0.5; } #coach.plan.busy .plan-map polyline { opacity: 0.35; }
+.plan-opts .plan-top { display: flex; justify-content: space-between; align-items: center; }
+.plan-busy { display: inline-flex; align-items: center; gap: 7px; font-style: normal; color: var(--guide); opacity: 0; transition: opacity 0.15s; }
+.plan-busy i { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--guide); border-right: 1.5px solid transparent; }
+#coach.plan.busy .plan-busy { opacity: 1; } #coach.plan.busy .plan-busy i { will-change: transform; animation: planSpin 0.7s linear infinite; }
+.plan-opts > div.plan-bar { display: block; height: 2px; margin-top: -2px; border-radius: 1px; overflow: hidden; background: rgba(242, 245, 247, 0.08); }
+.plan-bar i { display: block; width: 38%; height: 100%; border-radius: 1px; background: linear-gradient(90deg, transparent, var(--guide), transparent); opacity: 0; transform: translateX(-110%); will-change: transform; }
+#coach.plan.busy .plan-bar i { opacity: 1; animation: planBar 0.85s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes planBar { to { transform: translateX(290%); } } @keyframes planSpin { to { transform: rotate(360deg); } }
+#coach .plan-opts button { transition: box-shadow 0.14s ease, background-color 0.14s ease, color 0.14s ease, transform 0.08s ease; }
+#coach .plan-opts button:active:not(:disabled) { transform: scale(0.97); }
+.plan-grid .chg { animation: planChg 1.5s ease-out; }
+@keyframes planChg { 0%, 30% { color: var(--guide); text-shadow: 0 0 10px rgba(111, 227, 255, 0.55); } }
 .plan-map image.over { image-rendering: pixelated; }
 .plan-map polyline.r-short { stroke: #f2f5f7; opacity: 0.9; } .plan-map polyline.r-least { stroke: #ffb454; opacity: 0.95; }
 .plan-map g.sun circle { fill: #ffd978; stroke: #0a0d10; stroke-width: 0.5; } .plan-map g.sun line { stroke: #ffd978; stroke-linecap: round; }
@@ -521,3 +536,47 @@ body:is(:not(.training), :has(#agent.spot)):not(.npc-open, .choosing):has(#agent
 @media (max-height: 840px) { body:not(.training, .npc-open, .choosing):has(#agent.warn:not([hidden]), #agent.alert:not([hidden])) #navBlock { visibility: hidden; } }
 /* A long rule in the card's header wraps on the right and keeps clear of the word AGENT. */
 .agent-head { gap: 14px; } #agentRule { text-align: right; }
+
+/* Owner's test of 2026-11-15 evening: every card that opens can be closed with a cross. */
+#coach header .coach-x, #agentClose { flex: none; width: 28px; height: 28px; padding: 0 !important; border: 0; border-radius: 50% !important; background: none !important; box-shadow: inset 0 0 0 1px rgba(242, 245, 247, 0.4) !important;
+  font: 400 18px/1 var(--font); letter-spacing: 0 !important; color: var(--ink-2) !important; cursor: pointer; pointer-events: auto; display: grid; place-items: center; }
+#coach header .coach-x:hover, #agentClose:hover { background: var(--ink) !important; color: #0a0d10 !important; box-shadow: none !important; }
+#coach header .coach-x { margin-left: 4px; }
+#agentClose { width: 24px; height: 24px; font-size: 16px; margin: -4px -6px -4px 0; }
+.agent-head { align-items: center; } #agentRule { flex: 1; }
+body.planning #scene { cursor: pointer; }
+/* World map: the switch of the geologic map, at the top where it is seen. */
+.w-layer { position: absolute; left: 50%; top: 3vh; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px; border: 0; border-radius: var(--r-ctl, 8px); cursor: pointer;
+  background: rgba(7, 11, 15, 0.72); box-shadow: inset 0 0 0 1.5px rgba(234, 252, 255, 0.4); color: var(--ink, #eafcff); font: 600 13px "Chakra Petch", sans-serif; letter-spacing: 0.06em; }
+.w-layer kbd { font: 600 12px "Chakra Petch", sans-serif; min-width: 24px; height: 24px; display: grid; place-items: center; border-radius: 5px; box-shadow: inset 0 0 0 1.5px rgba(234, 252, 255, 0.55); background: none; color: inherit; }
+.w-layer[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--guide, #6fe3ff); } .w-layer[aria-pressed="true"] kbd { background: var(--ink, #eafcff); color: #070b0f; box-shadow: none; }
+.w-layer:hover { background: rgba(7, 11, 15, 0.9); box-shadow: inset 0 0 0 1.5px var(--ink, #eafcff); }
+/* The marks and the arrows at the top of the tour card turn its pages. */
+#coach .pips i { position: relative; cursor: pointer; } #coach .pips i::after { content: ""; position: absolute; inset: -11px -2px; }
+#coach .pips i:hover { background: var(--ink); }
+#coach .count { display: flex; align-items: center; gap: 8px; }
+#coach header button.pg { width: 26px; height: 26px; padding: 0 0 2px !important; border-radius: 50% !important; box-shadow: inset 0 0 0 1px rgba(242, 245, 247, 0.4) !important; font: 400 18px/1 var(--font); letter-spacing: 0 !important; color: var(--ink-2) !important; cursor: pointer; display: grid; place-items: center; }
+#coach header button.pg:hover:not(:disabled) { background: var(--ink) !important; color: #0a0d10 !important; box-shadow: none !important; }
+#coach header button.pg:disabled { opacity: 0.25; cursor: default; }
+/* Off the route: the arrow that shows the way back to the planned line. */
+#backArrow { position: absolute; z-index: 4; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; pointer-events: none; transition: left 0.12s linear, top 0.12s linear; }
+#backArrow[hidden] { display: none; }
+#backArrow i { width: 44px; height: 44px; transform: rotate(var(--rot, 0deg)); filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 10px rgba(111, 227, 255, 0.75)); animation: backNudge 1.1s ease-in-out infinite;
+  background: var(--guide); clip-path: polygon(50% 0, 100% 100%, 50% 72%, 0 100%); }
+#backArrow span { font: 600 14px var(--font); letter-spacing: 0.06em; color: var(--ink); white-space: nowrap; padding: 3px 9px; border-radius: 6px; background: rgba(6, 9, 12, 0.55); border-left: 2px solid var(--guide); }
+#backArrow.at { transform: translate(-50%, -100%); } #backArrow.at span { order: -1; }
+@keyframes backNudge { 50% { opacity: 0.55; scale: 0.86; } }
+body.training #backArrow, body.cine #backArrow { display: none; }
+/* Goggles (key X): the scene through a colour table, a line that says what the view is, and the flashes of the radiation view. */
+body.gog-ir #scene { filter: url(#fxIr); } body.gog-rad #scene { filter: url(#fxRad); }
+#gogFx { position: absolute; inset: 0; pointer-events: none; }
+#gogFx[hidden] { display: none; }
+#gogFx::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.5)); }
+#gogFx canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#gogFx p { position: absolute; left: 50%; top: 23vh; transform: translateX(-50%); margin: 0; max-width: min(92vw, 720px); text-align: center; padding: 7px 14px; border-radius: 8px; background: rgba(6, 9, 12, 0.62);
+  font: 500 13px/1.45 var(--font); letter-spacing: 0.02em; color: var(--ink-2); }
+#gogFx p b { display: block; font-weight: 600; letter-spacing: 0.1em; color: var(--ink); }
+#gogFx p small { display: block; font-size: 11px; letter-spacing: 0.1em; color: var(--ink-3); }
+body.cine #gogFx p, body.planning #gogFx p { display: none; }
+#doseSrc.sim { display: block; text-align: right; font-size: 11px; letter-spacing: 0.04em; margin-top: -1px; }
+#gogFx canvas { filter: drop-shadow(0 0 3px rgba(170, 255, 220, 0.9)); }

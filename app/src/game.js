@@ -14,7 +14,7 @@ import './game.css';
 import './hud2.css';
 import '@fontsource/chakra-petch/700.css';
 import { envNow, envSeries } from './env.js';
-import { radCurve } from './rad.js';
+import { radCurve, FLICKER, flickerShare, radFlicker } from './rad.js';
 import { setupVisit, arrivalCaption, land } from './visit.js';
 
 const h = (tag, attrs = {}, html = '') => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); e.innerHTML = html; return e; };
@@ -127,7 +127,7 @@ const SCENARIOS = [
 
 const ACTIONS = [
   ['KeyW', 'W', 'WALK', 'hold'], ['KeyP', 'P', 'AUTO WALK'], ['KeyT', 'T', '+30 MIN'], ['KeyE', 'E', 'PARTNER O₂'],
-  ['KeyR', 'R', 'SOLAR STORM'], ['KeyC', 'C', 'GROUND TYPES'], ['KeyM', 'M', 'MAP'], ['KeyL', 'L', 'GEOLOGY'], ['KeyV', 'V', 'LOOK DOWN'], ['KeyG', 'G', 'WHY'], ['Tab', 'TAB', 'ALL READINGS'],
+  ['KeyR', 'R', 'SOLAR STORM'], ['KeyC', 'C', 'GROUND TYPES'], ['KeyM', 'M', 'MAP'], ['KeyL', 'L', 'GEOLOGY'], ['KeyV', 'V', 'LOOK DOWN'], ['KeyX', 'X', 'GOGGLES'], ['KeyG', 'G', 'AGENT'], ['Tab', 'TAB', 'ALL READINGS'],
 ];
 
 export function setupGame(api) {
@@ -157,7 +157,7 @@ export function setupGame(api) {
   const day = h('section', { id: 'day', class: 'panel' }, `
     <div class="day-head"><b>SOL 4709</b><span id="dayClock"></span><i>REPLAY OF A REAL DAY · 4 NOV 2025</i></div>
     <div class="tiles">
-      <div data-kind="computed"><span>EARTH LINK</span><b id="tLink">--</b></div><div data-kind="measured"><span>DOSE RATE</span><canvas id="tDose" width="120" height="28"></canvas></div>
+      <div data-kind="computed"><span>EARTH LINK</span><b id="tLink">--</b></div><div data-kind="${FLICKER.on ? 'simulated' : 'measured'}" title="${FLICKER.on ? 'The last 18 s of the number on the panel: a simulated flicker around the RAD reading, which is the dashed line' : 'RAD readings of the sol'}"><span>DOSE RATE</span><canvas id="tDose" width="120" height="28"></canvas></div>
     </div>
     <div class="day-mini" id="dayMini"></div>
     <div class="src">CURIOSITY RAD · JPL HORIZONS</div>
@@ -187,18 +187,20 @@ export function setupGame(api) {
     dock.appendChild(b);
   }
   const guideBtn = h('button', { class: 'wide' }, '<kbd>?</kbd>GUIDED TOUR');
-  guideBtn.addEventListener('click', () => startTraining(0));
+  guideBtn.addEventListener('click', () => startTraining(0, false));
   // Back to the first screen from anywhere (teammate's test: nothing led back, and SCENARIOS did not say that it ends a run).
   const scenBtn = h('button', { class: 'wide' }, '<kbd>≡</kbd><span>MAIN MENU</span>');
   scenBtn.addEventListener('click', () => showBriefing(false, true));
   dock.append(guideBtn, scenBtn);
-  // ? opens the guided tour. Escape closes what is on top: a layer card, the demo, the briefing over a walk.
+  // ? opens the guided tour. Escape closes what is on top: a layer card, the demo, the guided tour, the briefing over a walk.
   addEventListener('keydown', (e) => {
     // The key by its place on the keyboard too: with a Chinese input method on, e.key is not '?'.
-    if ((e.key === '?' || e.key === '？' || e.code === 'Slash') && step < 0) startTraining(0);
+    // ? again closes the tour, like every other key of the row that opens something.
+    if ((e.key === '?' || e.key === '？' || e.code === 'Slash') && !api.world.open) { if (step < 0) startTraining(0, !intro.hidden); else closeTour(); }
     if (e.code !== 'Escape') return;
     if (explainId) openExplain(null);
     else if (demo) { stopDemo(); leaveTour(); showBriefing(trained); }
+    else if (step >= 0) { if (!visit.open() && document.getElementById('keyKeep').hidden) closeTour(); }
     else if (!intro.hidden && trained) intro.hidden = true;
   });
   // Every panel is open at first. This line says which key folds them. It blinks until the panels were folded once (owner, 2026-11-15).
@@ -288,10 +290,11 @@ export function setupGame(api) {
         <p class="plan-day">${KD.computed}<b>LEAVE ${D.lmst} LOCAL TIME</b> · sun ${D.sun0.el > 0 ? `${Math.round(D.sun0.el)}° up in the ${compass(D.sun0.az)}` : 'not up yet'}, ${D.sun1.el > 0 ? `${Math.round(D.sun1.el)}° when you are back` : 'down when you are back'} · daylight ${D.rise} to ${D.set}<br>${KD.measured}air ${tC(D.airK)} · ground ${tC(D.groundK)} · dose on this walk ${D.doseUGy.toFixed(1)} µGy, in the instrument</p></figure>
       <div>
         <div class="plan-opts">
-          <span class="plan-h">THE ROUTE CONSIDERS</span>
+          <span class="plan-h plan-top">THE ROUTE CONSIDERS<em class="plan-busy" role="status"><i></i>PLANNING THE ROUTE AGAIN</em></span>
           <div><button class="opt on" disabled aria-pressed="true"><i></i><b>OXYGEN</b><small>slope and ground type</small></button>
             ${tog('steep', 'STEEP GROUND', `obstacle above ${steep}°`)}${tog('shade', 'SHADOW', lowSun || O.shade ? 'avoid terrain shadow' : 'little shadow at this hour')}</div>
           <div><span class="plan-h">YOU CARRY</span>${pick('loadKg', P.loads, 'LOAD')}<span class="plan-h">YOU LEAVE AT</span>${pick('depart', P.departs, 'HOUR')}</div>
+          <div class="plan-bar" aria-hidden="true"><i></i></div>
         </div>
         <table class="plan-t plan-c"><tr><th>THE SAME WALK, THREE WAYS</th><th>GROUND</th><th>WALK</th><th>OXYGEN</th><th>STEEP</th><th>SHADOW</th><th>SUN LINE</th></tr>${cmp}</table>
         <p class="plan-note">${KD.model}Walking only, with the same oxygen model and load in every row. STEEP: metres on ground above ${steep}°. SUN LINE: metres walked toward a sun lower than ${P.sunLowDeg}° · metres walked straight away from it.</p>
@@ -308,17 +311,35 @@ export function setupGame(api) {
   // A click on a choice of the plan screen: plan again, put the walk back at the habitat, draw again.
   function wirePlan() {
     coach.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => {
-      const key = b.dataset.opt, cur = api.planSummary().opts;
-      const val = b.dataset.val === undefined ? !cur[key] : key === 'loadKg' ? Number(b.dataset.val) : b.dataset.val;
-      if (cur[key] === val) return;
+      const key = b.dataset.opt, seg = b.dataset.val !== undefined;
+      if (coach.classList.contains('busy') || (seg && b.classList.contains('on'))) return;
+      const val = !seg ? !b.classList.contains('on') : key === 'loadKg' ? Number(b.dataset.val) : b.dataset.val;
+      // The choice shows on its button at once, and a moving bar says that the route is planned again.
+      // Before 2026-11-15 20:40 the whole screen dimmed and stood still for half a second with the old
+      // choice still marked, which read as a stutter (owner).
+      if (seg) b.parentElement.querySelectorAll('button').forEach((q) => q.classList.toggle('on', q === b));
+      else { b.classList.toggle('on', val); b.setAttribute('aria-pressed', String(val)); }
       coach.classList.add('busy');
-      // Let the "planning" state paint before the search runs (about half a second).
-      setTimeout(() => {
+      const cells = () => [...coach.querySelectorAll('.plan-grid td, .plan-grid .plan-sum b, .plan-grid .plan-day')];
+      const before = cells().map((q) => q.textContent), body = coach.querySelector('.body'), top = body ? body.scrollTop : 0, t0 = performance.now();
+      let ran = false;
+      const plan = () => {
+        if (ran) return; ran = true;
         api.setPlan({ [key]: val }); api.jumpTo(STEPS[step] && STEPS[step].plan ? STEPS[step].jump : { s: 2 });
-        const grid = coach.querySelector('.plan-grid');
-        if (grid) { grid.outerHTML = planHtml(); wirePlan(); fadeBody(); }
-        coach.classList.remove('busy'); done.add('plan');
-      }, 30);
+        const html = planHtml();
+        // The bar stays for at least 0.4 s, so a fast search does not blink. Then the numbers that changed light up once.
+        setTimeout(() => {
+          const grid = coach.querySelector('.plan-grid');
+          if (grid) {
+            grid.outerHTML = html; wirePlan(); fadeBody(); if (body) body.scrollTop = top;
+            const after = cells();
+            if (after.length === before.length) after.forEach((q, i) => { if (q.textContent !== before[i]) q.classList.add('chg'); });
+          }
+          coach.classList.remove('busy'); done.add('plan');
+        }, Math.max(0, 400 - (performance.now() - t0)));
+      };
+      // Two frames, so the button and the bar are on screen before the search takes the main thread (about half a second).
+      requestAnimationFrame(() => requestAnimationFrame(plan)); setTimeout(plan, 200);
     }));
   }
   const fadeBody = () => { const b = coach.querySelector('.body'); if (b) b.classList.toggle('more', b.scrollHeight - b.scrollTop - b.clientHeight > 6); };
@@ -331,11 +352,14 @@ export function setupGame(api) {
     document.body.classList.remove('cut'); void document.body.offsetWidth; document.body.classList.add('cut');
     spot(st.spot);
     coach.hidden = false; coach.classList.toggle('plan', !!st.plan); document.body.classList.toggle('planning', !!st.plan);
-    coach.innerHTML = `<header><span class="badge">GUIDED TOUR</span><span class="pips">${STEPS.map((_, i) => `<i class="${i < k ? 'past' : i === k ? 'now' : ''}"></i>`).join('')}</span><span class="count">${k + 1} / ${STEPS.length}</span></header>
+    coach.innerHTML = `<header><span class="badge">GUIDED TOUR</span><span class="pips">${STEPS.map((q, i) => `<i class="${i < k ? 'past' : i === k ? 'now' : ''}" data-step="${i}" role="button" title="${i + 1} · ${q.title}"></i>`).join('')}</span><span class="count"><button class="pg" data-step="${k - 1}" aria-label="Previous step" title="Previous step"${k === 0 ? ' disabled' : ''}>‹</button>${k + 1} / ${STEPS.length}<button class="pg" data-step="${k + 1}" aria-label="Next step" title="Next step">›</button></span><button class="coach-x" aria-label="Close the guided tour" title="Close the guided tour (Esc)">×</button></header>
       <div class="body"><h2>${st.title}</h2><p>${st.body}</p>${st.plan ? planHtml() : ''}
       ${st.why ? `<details class="why" open><summary>HOW WE KNOW</summary>${st.why.html ? st.why.html : ''}${st.why.fig ? `<img src="${import.meta.env.BASE_URL}figs/${st.why.fig}" alt="">` : ''}<p>${st.why.text}</p></details>` : ''}</div>
       ${st.task ? `<div class="task">${st.task[0] ? `<kbd>${st.task[0]}</kbd>` : ''}<span>${st.task[1]}</span><b class="tick">✓</b></div>` : ''}
-      <footer><button class="ghost" data-go="-1"${k === 0 ? ' disabled' : ''}>BACK</button><button class="go" data-go="1"${st.goal ? ' disabled' : ''}>${k === STEPS.length - 1 ? 'FINISH' : st.plan ? 'GO OUT' : 'NEXT'}</button></footer>`;
+      <footer><button class="ghost" data-go="-1"${k === 0 ? ' disabled' : ''}>BACK</button><button class="go" data-go="1"${st.goal ? ' disabled' : ''}>${k === STEPS.length - 1 ? 'FINISH' : st.plan && outCine ? 'NEXT · GO OUTSIDE' : 'NEXT'}</button></footer>`;
+    coach.querySelector('.coach-x').addEventListener('click', closeTour);
+    // The marks and the two arrows at the top of the card go straight to a step, without waiting for its task (owner, 2026-11-15: "how do I see the next page").
+    coach.querySelectorAll('header [data-step]').forEach((b) => b.addEventListener('click', () => { const to = Number(b.dataset.step); if (to !== step && to >= 0) { stopDemo(); showStep(to); } }));
     if (st.plan) wirePlan();
     // The text of a step fades at its lower edge while more follows below it.
     const body = coach.querySelector('.body');
@@ -344,14 +368,27 @@ export function setupGame(api) {
     body.querySelector('details')?.addEventListener('toggle', fadeBody);
     requestAnimationFrame(fadeBody); setTimeout(fadeBody, 450);
     coach.querySelectorAll('footer button').forEach((b) => b.addEventListener('click', () => {
-      const out = st.plan && b.dataset.go === '1' && params.get('cine') !== '0';
+      const out = st.plan && outCine && b.dataset.go === '1' && params.get('cine') !== '0';
       stopDemo(); showStep(step + Number(b.dataset.go));
       // From the plan to the ground: the descent plays while the walk loads behind it (owner, 2026-11-15: it stays, as the cut between the two).
       if (out) api.cine({ caption: arrivalCaption(api.site, 'GOING OUT'), onLand: land }).then(() => { stepAt = performance.now(); });
     }));
   }
-  function leaveTour() { step = -1; spot(null); coach.hidden = true; coach.classList.remove('plan'); document.body.classList.remove('planning'); }
-  function startTraining(k = 0) { stopDemo(); intro.hidden = true; showStep(k); }
+  // The card is emptied when the tour ends: a hidden card that still held an open "how we know" kept
+  // the left panels hidden in the free walk after the tour (owner's test of 2026-11-15).
+  function leaveTour() { step = -1; spot(null); coach.hidden = true; coach.innerHTML = ''; coach.classList.remove('plan', 'auto'); document.body.classList.remove('planning'); }
+  // The cross of the tour card, Escape, or a click beside the plan screen: the tour ends there and
+  // the free walk starts at the habitat (owner, 2026-11-15: the only way out of the card was a
+  // button that went on with the tour).
+  function closeTour() {
+    if (step < 0 || document.body.classList.contains('cine')) return;
+    stopDemo(); leaveTour(); openExplain(null); api.jumpTo({ s: 2 }); intro.hidden = true;
+  }
+  document.getElementById('scene').addEventListener('click', () => { if (step >= 0 && STEPS[step] && STEPS[step].plan) closeTour(); });
+  // The descent between the plan and the walk plays when the tour starts from the start screen. A tour
+  // opened during a walk (key ? or the button of the key bar) turns its pages without it.
+  let outCine = true;
+  function startTraining(k = 0, cineOut = true) { stopDemo(); intro.hidden = true; outCine = cineOut; showStep(k); }
   // The demo plays the tour by itself: each step shows, does its own task, opens "how we
   // know", and moves on. About a minute. Any button of the card takes over.
   let demo = null;
@@ -393,18 +430,18 @@ export function setupGame(api) {
     if (cleared) trained = true;
     intro.hidden = false;
     intro.querySelector('.intro-card').innerHTML = `
-      <p class="intro-kicker">${cleared ? 'TOUR COMPLETE' : 'MARS SURFACE WALK · GALE CRATER · SOL 4709'}</p>
+      ${cleared ? '<p class="intro-kicker">TOUR COMPLETE</p>' : ''}
       <h1>${cleared ? 'You have seen the whole display.' : 'A helmet display for an astronaut walking on Mars.'}</h1>
       ${cleared ? '<p><b>Now walk it yourself.</b> The plan is the one you saw: three stations in the boxwork and the way home, with EV2 at your side. At each station the display shows why the Curiosity team looked there and what each choice leaves for the way home. Nothing is timed and nothing is scored.</p>'
     : '<p>Earth is 20 minutes away by radio, so the crew decides on the spot. While you walk, the display answers three questions: <b>which way</b>, <b>how much time and oxygen are left</b>, and <b>when to turn back</b>.</p><p><b>Science goal:</b> the boxwork ridges on Mount Sharp, which Curiosity studied in 2025. The three stations are spots the rover team chose to photograph. At each one the display shows why the team looked there and the photo the rover took.</p><p>The place, the ground and the stations are real NASA data. The weather and the radiation replay one real day, sol 4709. The particle event is a real one from another day, 20 May 2024.</p>'}
       <div class="intro-actions">
         ${trained ? '<button class="go" data-do="free">' + (fromWalk ? 'BACK TO THE WALK' : 'FREE WALK') + '</button><button class="ghost" data-do="train">GUIDED TOUR AGAIN</button>'
-    : `<button class="go" data-do="train">START THE GUIDED TOUR · ${STEPS.length} STEPS</button>${fromWalk ? '<button class="ghost" data-do="free">BACK TO THE WALK</button>' : ''}`}<button class="ghost" data-do="demo">WATCH THE DEMO</button>
+    : `<button class="go" data-do="train">START THE GUIDED TOUR · ${STEPS.length} STEPS</button>${fromWalk ? '<button class="ghost" data-do="free">BACK TO THE WALK</button>' : ''}`}
       </div>
       ${trained ? `<p class="intro-kicker">OR START IN A SCENARIO</p><div class="scen">${SCENARIOS.map((s, i) => `<button data-scen="${i}"><b>${s.name}</b><span>${s.note}</span></button>`).join('')}</div>` : ''}
       <p class="intro-small">A simulation of the view through a helmet display, in a browser. Simulated: the clock, the oxygen supply, sky and light, the glow of the particle event, and every sound (key N switches it off). Made with AI tools. The second astronaut's figure is AI-generated.</p>`;
     intro.querySelectorAll('[data-do]').forEach((b) => b.addEventListener('click', () => {
-      if (b.dataset.do === 'train') startTraining(0); else if (b.dataset.do === 'demo') runDemo();
+      if (b.dataset.do === 'train') startTraining(0);
       else { if (!fromWalk) api.jumpTo({ s: 2 }); intro.hidden = true; }   // a free walk starts at the habitat, not where the last tour step stood
     }));
     intro.querySelectorAll('[data-scen]').forEach((b) => b.addEventListener('click', () => {
@@ -439,6 +476,61 @@ export function setupGame(api) {
     ctx.stroke();
     if (last) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(Math.min(t, t1)), Y(last[1]), 3, 0, 6.3); ctx.fill(); }
   }
+  let stripAt = -1;
+  function liveStrip(cv, r, color) {
+    const ctx = cv.getContext('2d'), w = cv.width, hh = cv.height, span = 3.4 * flickerShare();
+    ctx.clearRect(0, 0, w, hh);
+    const X = (i) => w - 5 - (r.length - 1 - i) * (w - 9) / 39, Y = (q) => hh / 2 - (q - 1) / span * (hh / 2 - 3);
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(0, hh / 2); ctx.lineTo(w, hh / 2); ctx.stroke(); ctx.setLineDash([]);
+    if (!r.length) return;
+    ctx.globalAlpha = 1; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+    ctx.beginPath(); r.forEach((q, i) => (i ? ctx.lineTo(X(i), Y(q)) : ctx.moveTo(X(i), Y(q)))); ctx.stroke();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(r.length - 1), Y(r[r.length - 1]), 2.6, 0, 6.3); ctx.fill();
+  }
+
+  // ----- Goggles: two false-colour views of the scene (key X). Both are simulated looks. -----
+  // INFRARED: the brightness of the drawn image in a heat palette. It is not a temperature: the
+  // line over the view gives the measured ground and air temperature of REMS for that minute.
+  // RADIATION: the image in one colour, with flashes whose number per second follows the RAD
+  // reading (3 per second for each µGy/h, at most 500). A flash is drawn, not a counted particle.
+  const GOGGLES = [null, 'ir', 'rad'];
+  let goggle = Math.max(0, GOGGLES.indexOf(params.get('goggles')));
+  const gogFx = h('div', { id: 'gogFx', hidden: '' }, '<canvas></canvas><p></p>');
+  document.getElementById('scene').after(gogFx);
+  const gogCv = gogFx.firstElementChild, gogTag = gogFx.lastElementChild, gogCtx = gogCv.getContext('2d');
+  let gogSeed = 1, gogLast = 0, gogOwed = 0, gogText = '';
+  const gogRnd = () => { gogSeed = gogSeed + 0x6D2B79F5 | 0; let t = Math.imul(gogSeed ^ gogSeed >>> 15, 1 | gogSeed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  function setGoggle(k) {
+    goggle = k; gogSeed = FLICKER.seed; gogOwed = 0;
+    document.body.classList.toggle('gog-ir', GOGGLES[k] === 'ir'); document.body.classList.toggle('gog-rad', GOGGLES[k] === 'rad');
+    gogFx.hidden = !k; gogCtx.clearRect(0, 0, gogCv.width, gogCv.height);
+  }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyX' && !e.repeat && !e.ctrlKey && !e.metaKey && !api.world.open) setGoggle((goggle + 1) % GOGGLES.length); });
+  if (goggle) setGoggle(goggle);
+  function goggleTick(s, e, now) {
+    if (!goggle) return;
+    const dt = Math.min(0.1, (now - gogLast) / 1000); gogLast = now;
+    const kelvin = (q) => (q && Number.isFinite(q.v) ? `${Math.round(q.v - 273.15)} °C` : '--');
+    const text = GOGGLES[goggle] === 'ir'
+      ? `<b>INFRARED VIEW · SIMULATED</b>Image brightness in false colour, not a temperature. REMS at the rover: ground ${kelvin(e.ground)}, air ${kelvin(e.air)}`
+      : `<b>RADIATION VIEW · SIMULATED</b>Particles cannot be seen. Flashes per second follow the RAD reading: ${s.rad.rate.toFixed(s.rad.rate < 20 ? 1 : 0)} µGy/h`;
+    if (text !== gogText) { gogText = text; gogTag.innerHTML = `${text}<small>X · NEXT VIEW</small>`; }
+    if (GOGGLES[goggle] !== 'rad') return;
+    const w = Math.round(innerWidth / 2), hh = Math.round(innerHeight / 2);
+    if (gogCv.width !== w || gogCv.height !== hh) { gogCv.width = w; gogCv.height = hh; }
+    // What was drawn fades, then the flashes of this frame.
+    gogCtx.globalCompositeOperation = 'destination-out'; gogCtx.fillStyle = `rgba(0, 0, 0, ${Math.min(1, dt * 3.5).toFixed(3)})`; gogCtx.fillRect(0, 0, w, hh);
+    gogCtx.globalCompositeOperation = 'lighter';
+    gogOwed += Math.min(500, s.rad.rate * 3) * dt;
+    for (; gogOwed >= 1; gogOwed -= 1) {
+      const x = gogRnd() * w, y = gogRnd() * hh, len = 2 + gogRnd() * gogRnd() * 22, a = gogRnd() * 6.283, r = 1.2 + gogRnd() * 1.8;
+      gogCtx.strokeStyle = gogCtx.fillStyle = `rgba(215, 255, 235, ${(0.7 + gogRnd() * 0.3).toFixed(2)})`; gogCtx.lineWidth = 1.2;
+      gogCtx.beginPath(); gogCtx.moveTo(x, y); gogCtx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); gogCtx.stroke();
+      gogCtx.beginPath(); gogCtx.arc(x, y, r, 0, 6.3); gogCtx.fill();
+    }
+  }
+
   const eventCurve = radCurve('event');
   const eventEnd = eventCurve[eventCurve.length - 1][0];
   window.__env = { series: Object.fromEntries(['air_k', 'ground_k', 'pressure_pa', 'uv_abc'].map((k) => [k, envSeries(k).length])) };
@@ -466,8 +558,15 @@ export function setupGame(api) {
     // The day.
     $('dayClock').textContent = `${e.lmst} LOCAL`;
     $('tLink').innerHTML = `${Math.floor(e.lightMin)}<small> min </small>${String(Math.round((e.lightMin % 1) * 60)).padStart(2, '0')}<small> s</small>`;
-    curve($('tDose'), radCurve('quiet'), s.elapsed, '#7dffb2', 0, 8 * 3600);
-    $('dayMini').innerHTML = `${KD.measured}DOSE <b>${s.rad.rate.toFixed(s.rad.rate < 20 ? 1 : 0)} µGy/h</b> · ${KD.computed}EARTH <b>${Math.floor(e.lightMin)} min</b>`;
+    // The small line of the dose rate. With the flicker on (rad.js) it is a strip of the last 18 s of
+    // the number on the panel around the reading in force, which is the dashed line. Without it, the readings of the sol.
+    if (FLICKER.on) {
+      const tk = Math.floor(now / FLICKER.stepMs);
+      if (tk !== stripAt && s.rad.rate > 0) { stripAt = tk; liveStrip($('tDose'), Array.from({ length: 40 }, (_, i) => radFlicker(s.rad.rate, tk - 39 + i) / s.rad.rate), s.alarm ? '#ff7aa8' : '#7dffb2'); }
+    } else curve($('tDose'), radCurve('quiet'), s.elapsed, '#7dffb2', 0, 8 * 3600);
+    goggleTick(s, e, now);
+    const shown = s.radLive || s.rad.rate;
+    $('dayMini').innerHTML = `${KD.measured}DOSE <b>${shown.toFixed(shown < 20 ? 1 : 0)} µGy/h</b> · ${KD.computed}EARTH <b>${Math.floor(e.lightMin)} min</b>`;
     visit.tick(s, now);
     if (visit.last() && step >= 0 && STEPS[step] && STEPS[step].station) done.add('visit');
     const focus = focusPref && step < 0 && stormK < 0.02 && !explainId;
@@ -485,7 +584,7 @@ export function setupGame(api) {
     }
     // Dock: which toggles are on.
     for (const b of dock.children) {
-      const on = { KeyP: s.auto, KeyR: s.rad.replay, KeyC: s.classLabels, KeyM: api.world.open, KeyL: api.minimap.layer === 'geology', KeyV: state.lookDown, KeyE: s.ev2Raised, Tab: !document.body.classList.contains('focus') }[b.dataset.code];
+      const on = { KeyP: s.auto, KeyR: s.rad.replay, KeyC: s.classLabels, KeyM: api.world.open, KeyL: api.minimap.layer === 'geology', KeyV: state.lookDown, KeyX: goggle > 0, KeyE: s.ev2Raised, KeyG: s.agentShown, Tab: !document.body.classList.contains('focus') }[b.dataset.code];
       if (on !== undefined) b.classList.toggle('on', !!on);
     }
     // Explanation: the live line.

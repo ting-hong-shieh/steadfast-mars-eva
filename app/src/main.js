@@ -10,7 +10,7 @@ import { Route, buildRouteLine, buildBeacons, Footsteps, ReturnLine, PLACES } fr
 import { spread, cellOf, cellXZ, toblerFactor, etaAt, useEta, heightGrid, GRID_N, CELL, usePlan, planTraverse, pathFacts, slopeGrid, shadeGrid, STEEP_DEG, SUN, WEIGHT } from './planner.js';
 import { supply, edgeO2, kjhToGPerMin, kjhToVo2, vo2Walk, vo2Level, vo2ToGPerMin, vo2ToWatts, hrFromVo2,
   STATION_KJ_H, EVA_MEAN_KJ_H, LEAK_KJ_H, BAND, ETA_DEFAULT, ETA_BY_CLASS, SUSTAIN, HR_BAND } from './metabolic.js';
-import { radNow, radDose, setRadShift } from './rad.js';
+import { radNow, radDose, setRadShift, radFlicker, FLICKER } from './rad.js';
 import { envNow, sunNow, setDeparture, daylight, DEPART_DEFAULT } from './env.js';
 import { lineOfSight, stateWithHold } from './los.js';
 import { Minimap } from './minimap.js';
@@ -50,7 +50,7 @@ const params = new URLSearchParams(location.search);
   if (sat >= 0 && sat <= 3) st.setProperty('--glass-sat', sat); }
 // EV2 uses ev2Now times EV1's oxygen from now on (crew.js). Every oxygen limit takes whoever runs
 // out first. Key E raises ev2Now to the largest Apollo pair (film scene).
-let ev2Now = ev2Ratio(params.get('ev2')), ev2Raised = null;
+let ev2Base = params.get('ev2'), ev2Now = ev2Ratio(ev2Base), ev2Raised = null;
 // ?yaw=<degrees> turns the head at the start, for captures.
 const state = {
   s: Number(params.get('s') || 0),
@@ -237,7 +237,11 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyP') state.auto = !state.auto;
   // +30 min, up to the EVA limit.
   if (e.code === 'KeyT') { const dt = Math.min(1800, Math.max(0, ASSUME.evaLimitH * 3600 - state.elapsedSec)); state.elapsedSec += dt; useO2(dt / 60 * STATION_GPM); evaStarted = true; }
-  if (e.code === 'KeyE' && ev2Raised === null) { ev2Now = PAIR_RATIO_MAX; ev2Raised = performance.now(); agentShown = ''; agentTypedAt = performance.now(); }
+  // E: EV2 uses more oxygen than EV1. E again: EV2 is back at the starting ratio (the oxygen already used stays used).
+  if (e.code === 'KeyE') {
+    if (ev2Raised === null) { ev2Now = PAIR_RATIO_MAX; ev2Raised = performance.now(); } else { ev2Now = ev2Ratio(ev2Base); ev2Raised = null; }
+    agentDismissed = null; agentShown = ''; agentTypedAt = performance.now();
+  }
   if (e.code === 'KeyG') toggleAgent();
   if (e.code === 'KeyL') minimap.toggleLayer();
   // C: show the ground classes in the model's colours, or as materials again.
@@ -274,7 +278,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   elapsed: $('elapsed'), left: $('left'), leftBar: $('leftBar'), ret: $('ret'), margin: $('margin'),
   nextName: $('nextName'), nextDist: $('nextDist'), slope: $('slope'), off: $('off'), stnTime: $('stnTime'),
-  timeBlock: $('timeBlock'), o2: $('o2'), o2Bar: $('o2Bar'), effort: $('effort'), effortRow: $('effortRow'), doseRow: $('doseRow'), doseRate: $('doseRate'), doseSrc: $('doseSrc'), agent: $('agent'), agentText: $('agentText'), agentRule: $('agentRule'),
+  backArrow: $('backArrow'), timeBlock: $('timeBlock'), o2: $('o2'), o2Bar: $('o2Bar'), effort: $('effort'), effortRow: $('effortRow'), doseRow: $('doseRow'), doseRate: $('doseRate'), doseSrc: $('doseSrc'), agent: $('agent'), agentText: $('agentText'), agentRule: $('agentRule'),
   labels: $('labels'), tape: $('tape'), navBlock: $('navBlock'), los: $('los'), losRow: $('losRow'), ground: $('ground'), groundRow: $('groundRow'), offRow: $('offRow'), gauge: $('gauge'), keyRoute: $('keyRoute'), keyKeep: $('keyKeep'), keys: $('keys'), mmReach: document.querySelector('.mm-reach'), photoRow: $('photoRow'), nextThumb: $('nextThumb'), photoKey: $('photoKey'), agentFig: $('agentFig'), gArc2: $('gArc2'), ev2Tag: $('ev2Tag'), gArc: $('gArc'), gO2: $('gO2'), gTime: $('gTime'), gSub: $('gSub'),
 };
 // Corner map. ?map=0..4 picks the zoom step, ?map=off hides it, ?mapopen=0..3 opens it at
@@ -548,7 +552,7 @@ function agentMessage() {
   if (n.short.length) {
     const who = n.short.map((m) => m.who).join(' and '), m0 = n.short[0];
     return {
-      rule: 'RULE · O₂ LEFT BELOW THE WALK HOME', warn: true, alert: true,
+      id: 'short', rule: 'RULE · O₂ LEFT BELOW THE WALK HOME', warn: true, alert: true,
       head: `EMERGENCY. ${who} ${n.short.length > 1 ? 'run' : 'runs'} out of O₂ before HAB.`,
       body: `${n.short.map((m) => `${m.who} is ${m.o2Ret - m.o2Left} g short of the walk home.`).join(' ')}\nStart the suit's backup O₂ procedure and tell the HAB. Follow the amber line (${dur(n.ret)}).${homeSide() ? ` It starts ${homeSide()}.` : ''}`,
       note: `Modelled oxygen, not a suit reading. The walk back is the least-oxygen path with a +1 SD band. The backup procedure is not modelled.${m0.who === 'EV2' ? ' EV2 uses a fixed multiple of EV1\'s oxygen.' : ''}`,
@@ -556,7 +560,7 @@ function agentMessage() {
   }
   if (ev2Raised !== null && performance.now() - ev2Raised < 25000) {
     return {
-      rule: 'RULE · PAIR · FIRST TO RUN OUT DECIDES', warn: true,
+      id: 'pair', rule: 'RULE · PAIR · FIRST TO RUN OUT DECIDES', warn: true,
       head: `EV2 is using ${Math.round((ev2Now - 1) * 100)} % more oxygen than EV1.`,
       body: `The plan now uses EV2's oxygen: margin ${dur(n.margin)}, ${n.who} decides.\nThe same gap as the two crew members of Apollo 16 EVA 1.`,
       note: 'Apollo 15 to 17: Miller et al. 2017 (S38). The gap is a fixed multiple, not a second metabolic model.',
@@ -567,7 +571,7 @@ function agentMessage() {
     const inside = min <= SHELTER_REF_MIN;
     const r = radNow(state.elapsedSec, state.alarm);
     return {
-      rule: 'RULE · DOSE RATE 25 % ABOVE BACKGROUND',
+      id: 'alarm', rule: 'RULE · DOSE RATE 25 % ABOVE BACKGROUND',
       warn: true,
       head: 'Particle event. Go to HAB on the amber line.',
       body: `HAB ${dur(n.ret)} · ${(n.back / 1000).toFixed(2)} km${homeSide() ? ` · starts ${homeSide()}` : ''} · ${inside ? 'within' : 'beyond'} ${SHELTER_REF_MIN} min of shelter\nDose rate ${r.rate.toFixed(r.alarm ? 0 : 1)} µGy/h · ${(r.rate / r.quiet).toFixed(r.rate / r.quiet < 10 ? 1 : 0)}× before the event`,
@@ -581,14 +585,14 @@ function agentMessage() {
       const to = `${[...sg.keep, 'HAB'].join(' → ')}${sg.gone.length ? `, drops ${sg.gone.join(' and ')}` : ''}`;
       const pc = (v) => `${Math.round(v * 100)} %`;
       return {
-        rule: 'RULE · OFF ROUTE · YOU DECIDE', warn: true,
+        id: 'off-decide', rule: 'RULE · OFF ROUTE · YOU DECIDE', warn: true,
         head: sg.oldFits ? `Off route ${m} m. New route from here: white dashes.` : `Off route ${m} m. The old route no longer fits.`,
         body: `Enter: new route ${to}. Finish plan ${pc(sg.confNew)}.\nEsc: back to the cyan line (${back} g O₂), old route. Finish plan ${pc(sg.confOld)}.`,
         note,
       };
     }
     return {
-      rule: 'RULE · OFF ROUTE', warn: true,
+      id: 'off', rule: 'RULE · OFF ROUTE', warn: true,
       head: `Off route ${m} m.`,
       body: `Walk back to the cyan line (${back} g O₂, ${Math.round(offInfo.share * 100)} % of the margin).`,
       note,
@@ -599,7 +603,7 @@ function agentMessage() {
     const next = planNote.keep.length ? `New route: ${planNote.keep.join(' → ')} → HAB` : 'New route: HAB';
     const gone = planNote.gone.length ? ` ${planNote.gone.join(' and ')} dropped.` : '';
     return {
-      rule: planNote.why === 'off' ? 'RULE · NEW PLAN WHEN OFF ROUTE' : planNote.why === 'crew' ? 'CREW CHOICE · GO HOME' : 'RULE · DROP STATIONS WHEN LATE', warn: true,
+      id: `plan-${planNote.at}`, rule: planNote.why === 'off' ? 'RULE · NEW PLAN WHEN OFF ROUTE' : planNote.why === 'crew' ? 'CREW CHOICE · GO HOME' : 'RULE · DROP STATIONS WHEN LATE', warn: true,
       head: planNote.why === 'off' ? `New route taken.${gone}` : planNote.why === 'crew' ? `Your call: going home.${planNote.gone.length ? ` ${planNote.gone.join(' and ')} skipped.` : ''}` : `Late.${gone}`,
       body: `${next} · finish plan ${Math.round(planNote.conf * 100)} %`,
       note: `Assumed: ${PLACES[1].workMin} min per station, ${ASSUME.reserveMin} min reserve. Oxygen: suited test data at 3/8 g (NASA 2009), slope term from Minetti 2002.`,
@@ -608,7 +612,7 @@ function agentMessage() {
   if (arrival && n.margin > 0) {
     const { info, pl, dist } = arrival;
     return {
-      rule: `${pl.name} · ${Math.round(dist)} m`, warn: false,
+      id: `arrive-${pl.name}`, rule: `${pl.name} · ${Math.round(dist)} m`, warn: false,
       head: `${pl.name}: ${pl.task}.`,
       body: `Curiosity stood here on sol ${info.sol} and imaged ${info.target.replace(/_/g, ' ')}.\nWork planned: ${pl.workMin} min. ${dur(n.margin)} to spare.`,
       note: 'Mastcam M-100, calibrated. NASA/JPL-Caltech/MSSS.',
@@ -617,7 +621,7 @@ function agentMessage() {
   }
   if (headHome() && n.margin > 0) {
     return {
-      rule: 'RULE · FINISH PLAN BELOW 90 %', warn: true,
+      id: 'head-home', rule: 'RULE · FINISH PLAN BELOW 90 %', warn: true,
       head: `Head home now. Finish plan ${Math.round(conf.p * 100)} %.`,
       body: `Follow the amber line to HAB (${dur(n.ret)}).`,
       note: `GO at ${GO_AT * 100} % or more is our setting. The turn-back rule (margin at zero) still applies.`,
@@ -625,7 +629,7 @@ function agentMessage() {
   }
   const go = n.margin > 0;
   return {
-    rule: 'RULE · RETURN LIMIT', warn: !go,
+    id: go ? 'limit-go' : 'limit-back', rule: 'RULE · RETURN LIMIT', warn: !go,
     head: go ? `Continue. ${dur(n.margin)} to spare (${n.by === 'O2' ? `oxygen, ${n.who}` : 'time'}).` : 'Turn back. Follow the amber line to HAB.',
     // One action line and one number. The sums behind the margin are in docs/methods.md ("Margin"),
     // owner's choice of 2026-11-14 after the review panel.
@@ -633,7 +637,16 @@ function agentMessage() {
     note: `Assumed: ${ASSUME.evaLimitH} h limit, ${ASSUME.walkKmh} km/h on flat ground, slower on slopes (Tobler 1993). O₂ sized for ${ASSUME.evaLimitH} h at the Apollo mean rate. Suit data: one prototype suit at 3/8 g (NASA 2009). Simulated clock.`,
   };
 }
-function toggleAgent() { agentOpen = !agentOpen; agentShown = ''; agentTypedAt = performance.now(); }
+// G and the cross of the box. A box that is on screen closes, whether the walker opened it or a
+// rule did, and stays closed until another message takes its place (owner, 2026-11-15: the box
+// must not stay on the screen). A closed box opens.
+let radLive = 0;
+if (params.get('flicker') === '0') FLICKER.on = false;
+if (/^\d+$/.test(params.get('seed') || '')) FLICKER.seed = Number(params.get('seed'));
+let agentVisible = false, agentDismissed = null, agentNowId = null;
+function closeAgent() { agentOpen = false; agentDismissed = agentNowId; }
+function toggleAgent() { if (agentVisible) closeAgent(); else { agentOpen = true; agentDismissed = null; } agentShown = ''; agentTypedAt = performance.now(); }
+document.getElementById('agentClose').addEventListener('click', () => { closeAgent(); document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
 
 function drawTape(headingDeg, bearingDeg, markColor) {
   const cv = el.tape, dpr = Math.min(devicePixelRatio, 2);
@@ -689,8 +702,12 @@ function updateHud(now, dt) {
   el.timeBlock.classList.toggle('warn', n.margin <= 0);
   el.doseRow.classList.toggle('warn', alarm);
   const rad = radNow(state.elapsedSec, state.alarm);
-  el.doseRate.innerHTML = `${rad.rate.toFixed(rad.rate < 20 ? 1 : 0)}<span class="unit"> µGy/h</span><span class="km"> · ${rad.total.toFixed(0)} µGy</span>`;
-  el.doseSrc.textContent = `${rad.label} · IN INSTRUMENT`;
+  // The number moves around the reading between two readings (rad.js, radFlicker: simulated, the line under it says so).
+  radLive = radFlicker(rad.rate, Math.floor(performance.now() / FLICKER.stepMs));
+  el.doseRate.innerHTML = `${radLive.toFixed(radLive < 20 ? 1 : 0)}<span class="unit"> µGy/h</span><span class="km"> · ${rad.total.toFixed(0)} µGy</span>`;
+  // With the flicker on, a line under the row gives the reading itself and says that the movement is simulated.
+  el.doseSrc.textContent = FLICKER.on ? `RAD READING ${rad.rate.toFixed(rad.rate < 20 ? 1 : 0)} · FLICKER SIMULATED` : `${rad.label} · IN INSTRUMENT`;
+  el.doseSrc.classList.toggle('sim', FLICKER.on);
 
   // The way back is traced before the panel reads from it.
   returnLine.update(state.pos.x, state.pos.z, back);
@@ -768,6 +785,33 @@ function updateHud(now, dt) {
     d.classList.toggle('warn', back);
   }
 
+  // Off the route by hand: an arrow over the view that shows where to walk back to the planned
+  // line, as a waypoint mark in a game does (owner, 2026-11-15). The target is the point of the
+  // route 4 m ahead of the nearest one. In view: the arrow floats over that point. Out of view: it
+  // sits on a ring around the middle of the screen, on the side to turn to. Not shown on the auto
+  // walk, on the way home, or while a card holds the walk.
+  {
+    const show = !back && !state.auto && !state.frozen && state.offset >= OFF_MIN_M && !document.body.classList.contains('choosing');
+    el.backArrow.hidden = !show;
+    if (show) {
+      const tp = route.at(Math.min(route.length, state.s + 4)).p, dist = Math.hypot(tp.x - state.pos.x, tp.z - state.pos.z);
+      v.set(tp.x, heightAt(tp.x, tp.z) + 1.5, tp.z).project(camera);
+      const inView = v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.7;
+      let sx, sy, rot;
+      if (inView) { sx = (v.x + 1) / 2 * innerWidth; sy = (1 - v.y) / 2 * innerHeight; rot = 180; }
+      else {
+        let d = Math.atan2(tp.x - state.pos.x, -(tp.z - state.pos.z)) - view;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        const R = Math.min(innerHeight * 0.26, innerWidth * 0.3);
+        sx = innerWidth / 2 + Math.sin(d) * R; sy = innerHeight * 0.46 - Math.cos(d) * R; rot = d * 180 / Math.PI;
+      }
+      el.backArrow.style.left = `${sx.toFixed(1)}px`; el.backArrow.style.top = `${sy.toFixed(1)}px`;
+      el.backArrow.style.setProperty('--rot', `${rot.toFixed(1)}deg`);
+      el.backArrow.classList.toggle('at', inView);
+      el.backArrow.lastElementChild.textContent = `ROUTE ${Math.round(dist)} m`;
+    }
+    window.__backArrow = show ? { x: Math.round(parseFloat(el.backArrow.style.left)), y: Math.round(parseFloat(el.backArrow.style.top)), at: el.backArrow.classList.contains('at') } : null;
+  }
   minimap.draw({
     pos: state.pos, view, fovDeg: 2 * Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect) * 180 / Math.PI, route, s: state.s, stations: route.stations,
     nextName: targetName, home: PLACES[0], returnPts: returnLine.pts, back, dt, reach: back ? null : reachSegs,
@@ -815,8 +859,11 @@ function updateHud(now, dt) {
   el.gauge.dataset.level = level === 'EMERGENCY' ? 'emergency' : calm ? 'go' : turn ? 'back' : 'caution';
   window.__offRoute = { offset: +state.offset.toFixed(1), warn: offWarn(), share: offInfo && +offInfo.share.toFixed(3), suggest: offInfo && offInfo.suggest, replans, why: planNote && planNote.why, keep: planNote && planNote.keep };
   const auto = back || offWarn() || !!arrival || (ev2Raised !== null && performance.now() - ev2Raised < 25000) || (planNote && state.elapsedSec - planNote.at < 90);
-  if (agentOpen || auto) {
-    const msg = agentMessage();
+  const msg = agentOpen || auto ? agentMessage() : null;
+  agentNowId = msg && msg.id;
+  agentVisible = !!msg && (agentOpen || msg.id !== agentDismissed);
+  if (msg && !agentOpen && msg.id !== agentDismissed) agentDismissed = null;   // another message: the closed one may come back later
+  if (agentVisible) {
     el.agent.hidden = false;
     el.agent.classList.toggle('warn', msg.warn);
     el.agent.classList.toggle('alert', !!msg.alert);
@@ -850,6 +897,27 @@ function resize() {
   if (look) { const v = renderer.getDrawingBufferSize(new THREE.Vector2()); look.resize(v.x, v.y); }
 }
 addEventListener('resize', resize); resize();
+// The corner map must not lie over the time panel. On a short screen (a laptop at 150 % scaling
+// is about 700 px high) the panel reached into the map and its DOSE RATE row was covered (owner,
+// 2026-11-15). When the two would meet, the panel moves up to just under the day panel and the
+// map gets smaller, with its lower edge kept where it is. Room for the EFFORT row is kept even
+// while that row is hidden, so the map does not change size during the walk.
+function fitCornerMap() {
+  const m = $('minimap'), b = el.timeBlock, d = $('day');
+  b.style.top = ''; m.style.removeProperty('--mm'); m.style.top = '';
+  if (innerWidth < 760 || m.classList.contains('open') || !b.offsetHeight) return;   // the phone layout has its own places; folded panels leave the map alone
+  const floor = innerHeight * 0.86, size = Math.max(132, Math.min(188, innerWidth * 0.12));   // the style sheet's values for the map
+  const need = b.offsetHeight + (el.effortRow.hidden ? 28 : 0) + 12;
+  let top = b.getBoundingClientRect().top;
+  if (top + need <= floor - size) { mapRect = m.getBoundingClientRect(); return; }
+  const dayEnd = d && d.offsetHeight ? d.getBoundingClientRect().bottom + 14 : top;
+  if (dayEnd < top) { top = dayEnd; b.style.top = `${Math.round(top)}px`; }
+  const fit = Math.round(Math.max(84, Math.min(size, floor - top - need)));
+  m.style.setProperty('--mm', `${fit}px`); m.style.top = `${Math.round(floor - fit)}px`;
+  mapRect = { left: m.offsetLeft, right: m.offsetLeft + fit, top: floor - fit, bottom: floor + 30 };
+}
+addEventListener('resize', fitCornerMap);
+new ResizeObserver(fitCornerMap).observe(el.timeBlock);
 
 let last = performance.now();
 state.offset = 0;
@@ -1003,7 +1071,7 @@ function jumpTo({ s = 0, t = 0, ev2: ev2Arg = null, alarm = false, auto = false,
   state.pos.copy(a.p); state.heading = a.heading; state.yawOffset = back ? Math.PI : 0; state.pitch = 0;
   state.lastH = heightAt(a.p.x, a.p.z);
   state.elapsedSec = t * 3600;
-  ev2Now = ev2Ratio(ev2Arg); ev2Raised = null;
+  ev2Base = ev2Arg; ev2Now = ev2Ratio(ev2Arg); ev2Raised = null; agentDismissed = null;
   // o2h: hours of use at the Apollo mean rate that the oxygen starts from, when not the hours elapsed.
   state.o2Used = Math.min(O2.totalG, (o2h === null ? state.elapsedSec : o2h * 3600) / 60 * kjhToGPerMin(EVA_MEAN_KJ_H + LEAK_KJ_H));
   state.o2Used2 = Math.min(O2.totalG, state.o2Used * ev2Now);
@@ -1086,9 +1154,9 @@ setupGame({
   stationInfo: (name) => stationInfo[name], stationChem: (name) => stationChem[name], stationsReady, places: PLACES, camera, startMin: (ASSUME.evaLimitH * 60), reserveMin: ASSUME.reserveMin, get walkGpm() { return WALK_GPM; }, stationGpm: STATION_GPM, o2: O2,
   snapshot: () => {
     const n = numbers();
-    return { n, alarm: alarmOn(), rad: radNow(state.elapsedSec, state.alarm), ground: classAt(state.pos.x, state.pos.z), patch: classPatchAt(state.pos.x, state.pos.z),
+    return { n, alarm: alarmOn(), rad: radNow(state.elapsedSec, state.alarm), radLive, ground: classAt(state.pos.x, state.pos.z), patch: classPatchAt(state.pos.x, state.pos.z),
       next: (() => { const nx = route.nextStation(state.s); return { name: nx.name, dist: Math.max(0, nx.s - state.s), p: nx.p }; })(), ahead: stationsAhead().map((pl) => pl.name),
-      classLabels, ev2Raised: ev2Raised !== null, ev2Now, auto: state.auto, elapsed: state.elapsedSec, walked: state.walked || 0, back: goHome(n),
+      classLabels, ev2Raised: ev2Raised !== null, agentShown: agentVisible && el.agent.getClientRects().length > 0, ev2Now, auto: state.auto, elapsed: state.elapsedSec, walked: state.walked || 0, back: goHome(n),
       dropped: dropped.slice(), conf: conf ? conf.p : null, eta: ETA_BY_CLASS, etaDefault: ETA_DEFAULT, level: el.gauge.dataset.level, word: el.gO2.textContent, routeM: Math.round(route.length) };
   },
 });

@@ -101,7 +101,7 @@ export class Minimap {
     this.srcEl.textContent = geo ? 'GEOLOGY: USGS SIM 3292 (1:20M) · VIA MARS TREK · STORED OFFLINE'
       : `MARS TREK ${this.open ? 'HIRISE + CTX' : 'HIRISE'} · STORED OFFLINE`;
     this.legendEl.hidden = !geo;
-    if (!geo) return;
+    if (!geo) { this.legendEl.innerHTML = ''; return; }   // the style sheet shows the element even when hidden, so it is emptied
     // The units inside the circle now. The unit you stand on is marked HERE.
     const inside = this.unitsNow || new Set([g.here.unit]);
     const units = g.units.filter((u) => inside.has(u.unit));

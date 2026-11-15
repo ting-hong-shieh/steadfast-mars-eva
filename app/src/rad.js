@@ -16,6 +16,11 @@ export async function loadRad(startUtc) {
   // so the dose rate, the weather and the clock on screen belong to the same minutes of that day.
   const q = series.quiet;
   q.base = startUtc ? (Date.parse(startUtc) - Date.parse(q.start_utc)) / 1000 : 0;
+  // The spread of the readings of that sol, for the flicker below.
+  const vals = q.rows.map((r) => r[1]);
+  q.mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  q.sd = Math.sqrt(vals.reduce((a, b) => a + (b - q.mean) ** 2, 0) / vals.length);
+  q.min = Math.min(...vals); q.max = Math.max(...vals);
   setRadShift(0);
   const ev = series.event;
   // The replay starts at the first reading that meets the alarm rule (2024-05-20 05:21:50 UTC).
@@ -87,3 +92,25 @@ export function radNow(elapsed, alarmAt) {
 export const radCurve = (key) => key === 'event'
   ? series.event.rows.map((r) => [r[0] - series.event.replayStart, r[1]])
   : series.quiet.rows.map((r) => [r[0] - series.quiet.offset, r[1]]);
+
+// ----- Flicker between two readings: simulated -----
+// RAD stores one reading about every 17 minutes, so during a walk the number on the panel stood
+// still and read as a dead display (owner, 2026-11-15: a simulated value in a range, with a
+// distribution and a seed, so that it moves). The number and the small line on screen now move
+// around the reading in force. Each step of 0.45 s draws one value from a normal distribution
+// centred on that reading. Its standard deviation is the one of the readings of sol 4709
+// (0.19 µGy/h around a mean of 6.05), and a value stays between the lowest and the highest
+// reading of that sol (5.08 and 6.50). All three are scaled with the reading in force, so the
+// flicker keeps its share during the replay of the particle event. The draws come from a fixed
+// seed: the same step gives the same value on every run.
+// This is not a measurement. The dose sum, the alarm rule and the agent read the readings only.
+export const FLICKER = { seed: 4709, stepMs: 450, on: true };
+function unit(n) { let a = (n | 0) + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+export function radFlicker(rate, step) {
+  if (!FLICKER.on) return rate;
+  const q = series.quiet, k = rate / q.mean, base = Math.imul(FLICKER.seed, 7919) + step * 2;
+  const z = Math.sqrt(-2 * Math.log(Math.max(1e-9, unit(base)))) * Math.cos(2 * Math.PI * unit(base + 1));   // Box-Muller
+  return Math.min(q.max * k, Math.max(q.min * k, rate + z * q.sd * k));
+}
+// The spread of the flicker as a share of the reading: for the scale of the small line.
+export const flickerShare = () => series.quiet.sd / series.quiet.mean;

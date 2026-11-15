@@ -5,14 +5,54 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Concept build of a first-person helmet view for a Mars surface EVA. Written with an AI tool. Real Gale crater data from NASA missions. Simulated values are labelled.">
-  <link rel="icon" href="data:,">
-  <!-- Until the style sheets are in, nothing of the display is drawn (the bare shapes flashed on every reload). -->
-  <style>html { background: #07090b; } body:not(.styled) > * { visibility: hidden; }
-    body:not(.styled)::before { content: 'LOADING THE TERRAIN'; position: fixed; inset: 0; display: grid; place-items: center; font: 500 13px system-ui, sans-serif; letter-spacing: 0.24em; color: #8a949c; }</style>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#07090b">
+  <!-- The picture and the text a link to this page shows when it is shared. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SteadFast">
+  <meta property="og:title" content="SteadFast: a helmet display for an astronaut walking on Mars">
+  <meta property="og:description" content="Which way, how much time and oxygen are left, and when to turn back. A concept build on real Gale crater data from NASA missions. Simulated values are labelled. Made with AI tools.">
+  <meta property="og:url" content="https://steadfast.eliasshieh.com/">
+  <meta property="og:image" content="https://steadfast.eliasshieh.com/social.jpg">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="756">
+  <meta property="og:image:alt" content="First-person view of Gale crater with the route lit on the ground and the helmet display over it. A screenshot of the concept build, made with AI tools.">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Until the style sheets are in, nothing of the display is drawn (the bare shapes flashed on every reload).
+       The loading screen moves while the data files load, so the page does not look stuck (owner, 2026-11-15). -->
+  <style>html { background: #07090b; } body:not(.styled) > :not(#boot) { visibility: hidden; }
+    #boot { position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; justify-items: center; gap: 16px; background: #07090b; font: 500 13px system-ui, sans-serif; letter-spacing: 0.24em; color: #8a949c; }
+    body.styled #boot { display: none; }
+    #boot .steps { display: grid; gap: 3px; justify-items: center; margin-bottom: 4px; }
+    #boot .steps i { width: 16px; height: 16px; border: solid #6fe3ff; border-width: 3px 0 0 3px; border-radius: 2px; transform: rotate(45deg); animation: bootStep 1.2s infinite both; }
+    #boot .steps i:nth-child(1) { animation-delay: 0.4s; } #boot .steps i:nth-child(2) { animation-delay: 0.2s; }
+    #boot .bar { position: relative; width: 240px; height: 4px; border-radius: 2px; background: rgba(138, 148, 156, 0.22); overflow: hidden; }
+    /* The bar moves like something in a thick fluid: fast at first, then slowing to its mark. It runs on the
+       compositor, so it keeps moving while the script builds the view. */
+    #boot .bar i { position: absolute; inset: 0; border-radius: 2px; background: linear-gradient(90deg, #3aa9c9, #6fe3ff); transform-origin: 0 50%; transform: scaleX(0.03); will-change: transform; transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1); }
+    #boot .bar::after { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(234, 252, 255, 0.85), transparent); animation: bootSlide 1.3s ease-in-out infinite; }
+    #boot small { font-size: 11px; letter-spacing: 0.16em; opacity: 0.75; min-height: 1.2em; }
+    #boot .dots i { animation: bootDot 1.2s infinite both; font-style: normal; } #boot .dots i:nth-child(2) { animation-delay: 0.2s; } #boot .dots i:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bootStep { 0%, 100% { opacity: 0.15; } 40% { opacity: 1; } }
+    @keyframes bootSlide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+    @keyframes bootDot { 0%, 100% { opacity: 0.15; } 40% { opacity: 1; } }</style>
   <title>SteadFast: helmet view for a Mars walk (concept build)</title>
 </head>
 <body>
+  <div id="boot" role="status" aria-live="polite"><div class="steps" aria-hidden="true"><i></i><i></i><i></i></div><span>LOADING NASA DATA<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></span><div class="bar" aria-hidden="true"><i id="bootBar"></i></div><small id="bootStep">TERRAIN, MAPS, WEATHER, RADIATION</small></div>
   <canvas id="scene" aria-label="First-person view of the terrain"></canvas>
+  <!-- The two goggle views (key X): the brightness of the image through a colour table. Simulated looks, see docs/methods.md. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <filter id="fxIr" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+      <feColorMatrix type="matrix" values="0.3 0.59 0.11 0 0  0.3 0.59 0.11 0 0  0.3 0.59 0.11 0 0  0 0 0 1 0"/>
+      <feComponentTransfer><feFuncR type="table" tableValues="0 0.16 0.55 0.9 1 1 1"/><feFuncG type="table" tableValues="0 0 0.04 0.3 0.68 0.92 1"/><feFuncB type="table" tableValues="0.06 0.42 0.6 0.25 0.05 0.3 0.9"/></feComponentTransfer>
+    </filter>
+    <filter id="fxRad" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+      <feColorMatrix type="matrix" values="0.3 0.59 0.11 0 0  0.3 0.59 0.11 0 0  0.3 0.59 0.11 0 0  0 0 0 1 0"/>
+      <feComponentTransfer><feFuncR type="table" tableValues="0 0.02 0.1 0.35 0.8"/><feFuncG type="table" tableValues="0.02 0.16 0.42 0.72 1"/><feFuncB type="table" tableValues="0.05 0.16 0.34 0.56 0.9"/></feComponentTransfer>
+    </filter>
+  </defs></svg>
 
   <div id="hud" aria-live="off">
     <svg id="visor" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
@@ -59,6 +99,7 @@
     <div id="labels"></div>
     <div id="ev2Tag" class="ev2tag" style="display:none"></div>
     <div id="reticle" aria-hidden="true"></div>
+    <div id="backArrow" hidden aria-live="off"><i aria-hidden="true"></i><span></span></div>
 
     <div id="gauge" data-level="go" aria-label="Decision, time to spare and oxygen left">
       <svg viewBox="0 0 200 110" aria-hidden="true"><path class="trk" d="M15 100 A85 85 0 0 1 185 100" pathLength="100"/><path id="gArc" class="val" d="M15 100 A85 85 0 0 1 185 100" pathLength="100" stroke-dasharray="100 100"/><path class="trk2" d="M30 100 A70 70 0 0 1 170 100" pathLength="100"/><path id="gArc2" class="val2" d="M30 100 A70 70 0 0 1 170 100" pathLength="100" stroke-dasharray="100 100"/></svg>
@@ -67,7 +108,7 @@
       <div class="g-sub" id="gSub">O₂</div>
     </div>
     <section id="agent" hidden>
-      <div class="agent-head"><span>AGENT</span><span id="agentRule"></span></div>
+      <div class="agent-head"><span>AGENT</span><span id="agentRule"></span><button id="agentClose" type="button" aria-label="Close the agent box">×</button></div>
       <pre id="agentText"></pre>
       <figure id="agentFig" hidden><img alt="" /><figcaption></figcaption></figure>
     </section>

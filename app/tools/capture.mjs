@@ -69,6 +69,10 @@ try {
     ['tour-6-late', 'tour=6'],
     ['tour-7-storm', 'tour=7'],
     ['card-layer', 's=40&explain=ground'],
+    // The world map as it opens: the geologic map on, with its switch at the top.
+    ['world-map', 'world='],
+    ['goggles-ir', 's=60&goggles=ir'],
+    ['goggles-rad', 's=60&goggles=rad'],
   ].filter(([name]) => !only.length || only.some((w) => name.includes(w)));
   const sizes = [['desktop', 1440, 900], ['phone', 390, 844]].filter(([name]) => !onlySize || name === onlySize);
   // The scene is drawn in software here, so one frame can take many seconds: the waits are long.

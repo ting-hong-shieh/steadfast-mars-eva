@@ -7,7 +7,8 @@
 //    (tools/build_world_relief.py). The colour ramp is ours.
 //  - MEASURED: Curiosity's path and the six stops, from MSL PLACES (tools/build_site_terrain.py),
 //    and, zoomed in, the Mars Trek orbital images of the corner map.
-//  - MAPPED: the USGS geologic units (key L), the same layer as on the corner map.
+//  - MAPPED: the USGS geologic units, the same layer as on the corner map. They are on when the
+//    map opens, and the button at the top or key L hides them (owner, 2026-11-15).
 //  - OURS: the short names of the places. At five of them the stops of the walk are imagined.
 // Travel reloads the app at the chosen place (?site=<id>).
 import { SITE } from './site.js';
@@ -42,7 +43,8 @@ export function setupWorld({ state, minimap }) {
       <div><i class="k-dot" style="background:${OURS}"></i><b>OURS</b> place names · imagined stops at five places</div>
     </div>
     <div class="w-ramp"><span></span><i></i><span></span></div>
-    <div class="w-keys"><span><kbd>DRAG</kbd> move</span><span><kbd>WHEEL</kbd> zoom</span><span><kbd>L</kbd> geology</span><span><kbd>M</kbd> close</span></div>
+    <div class="w-keys"><span><kbd>DRAG</kbd> move</span><span><kbd>WHEEL</kbd> zoom</span><span><kbd>M</kbd> close</span></div>
+    <button class="w-layer" type="button" aria-pressed="true"><kbd>L</kbd><span></span></button>
     <button class="w-close" aria-label="Close the map">×</button>
     <div class="w-travel" hidden><span>TRAVEL</span><b></b></div>`;
   document.body.appendChild(root);
@@ -208,14 +210,23 @@ export function setupWorld({ state, minimap }) {
     const g = root.querySelector('.w-geo');
     if (g.hidden === geo) {
       g.hidden = !geo;
+      layerBtn.setAttribute('aria-pressed', String(geo));
+      layerBtn.lastChild.textContent = geo ? 'GEOLOGIC MAP ON · HIDE' : 'SHOW THE GEOLOGIC MAP';
       const lg = geologyLegend();
       g.querySelector('span').textContent = `geologic units · USGS SIM 3292 (1 : 20,000,000) · here: ${lg.here.unit}, ${lg.here.desc}`;
     }
   }
 
+  // The geologic units are on whenever the map opens. The corner map gets its own layer back when the map closes.
+  const layerBtn = root.querySelector('.w-layer');
+  layerBtn.lastChild.textContent = 'GEOLOGIC MAP ON · HIDE';
+  layerBtn.addEventListener('click', () => { minimap.toggleLayer(); layerBtn.blur(); });
+  let layerBefore = null;
   function setOpen(v) {
     if (open === v) return;
     open = v; root.hidden = !v; document.body.classList.toggle('world-open', v);
+    if (v) { layerBefore = minimap.layer; if (minimap.layer !== 'geology') minimap.toggleLayer(); }
+    else if (layerBefore && minimap.layer !== layerBefore) minimap.toggleLayer();
     if (v) { selected = SITE.id; fit(); showCard(); if (!raf) raf = requestAnimationFrame(draw); }
   }
   cv.addEventListener('wheel', (e) => {
